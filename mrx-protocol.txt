@@ -1,0 +1,52 @@
+Protocol for MrX
+
+establish TLS connection
+
+if new user:
+	while username used:
+		client sends username
+		server checks availability
+
+	client chooses password
+	client sends password
+	server chooses salt and stores H(password, salt)
+
+else:
+	while login refused:
+		client sends username and password
+		server checks if H(password, salt) matches stored value for user
+
+# will be replaced by ZKP
+
+while true:
+	server asks for granularity of location
+	client answers with accuracy of location
+
+	server starts at root node of quad tree
+
+	while location accuracy != threshold:
+		server chooses randomly left or right
+		server asks whether client is in random half of node
+
+		if client answers yes:
+			focus on randomly chosen half
+		else:
+			focus on other half
+
+		server chooses randomly up or down
+		server asks if client is in random quadrant of node
+
+		if client answers yes:
+			set node to chosen quadrant
+		else:
+			set node to other chosen quadrant
+
+	store location in datastructure
+
+
+	
+		
+	
+	
+	
+		 
