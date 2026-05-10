@@ -1,0 +1,21 @@
+[project]
+name = "mrx"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Alexander Marggraf", email = "idkzwingeling" },
+    { name = "Max Reintert", email = "idkzwingeling" },
+    { name = "Pascal von Fellenberg", email = "pvonfellenberg@bluewin.ch" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+mrx = "mrx:main"
+run_server = "mrx:server_main"
+run_client = "mrx:client_main"
+
+[build-system]
+requires = ["uv_build>=0.9.7,<0.10.0"]
+build-backend = "uv_build"
