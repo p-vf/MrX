@@ -13,8 +13,10 @@ dependencies = []
 
 [project.scripts]
 mrx = "mrx:main"
-run_server = "mrx:server_main"
-run_client = "mrx:client_main"
+server = "mrx:server_main"
+client = "mrx:client_main"
+create_db = "mrx:create_db_main"
+test_db = "mrx:test_db_main"
 
 [build-system]
 requires = ["uv_build>=0.9.7,<0.10.0"]

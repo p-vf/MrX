@@ -1,4 +1,6 @@
-from .server_client_stuff.server import main as server_main
-from .server_client_stuff.client import main as client_main
+from .communication.server import main as server_main
+from .communication.client import main as client_main
+from .database.create_user_db import main as create_db_main
+from .database.user_db_test import main as test_db_main
 
 
