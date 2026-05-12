@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css">
+
+  <title>MrX</title>
+
+</head>
+
+<body>
+    <div id="signup">
+
+        <div style="position: relative; display: flex; align-items: center; padding: 50px;">
+            
+            <h1 style="margin: 0 auto;">Signup</h1>
+
+            <button onclick="login()" style="position: absolute; right: 50px;">
+                Login
+            </button>
+
+        </div>
+
+        <main>
+            <div style="display: flex; justify-content: center; align-items: center; padding-top: 20px; padding-bottom: 10px;">
+                <label for="un-input" style="margin-right: 10px; margin-left: 10px">
+                    Username:
+                </label>
+                <input type="text" id="un-input" placeholder="Username..." style="margin-right: 10px; margin-left: 10px">
+            </div>
+            <div style="display: flex; justify-content: center; align-items: center; padding: 10px">
+                <label for="pw-input" style="margin-right: 10px; margin-left: 10px">
+                    Password:
+                </label>
+                <input type="text" id="pw-input" placeholder="Password..." style="margin-right: 10px; margin-left: 10px">
+            </div>
+            <div style="display: flex; justify-content: center; align-items: center; padding: 10px;">
+                <button id="signup-btn" onclick="signup()">
+                    Sign up
+                </button>
+            </div>
+        </main>
+
+    </div>
+
+  <script>
+    async function signup() {
+        const username =
+            document.getElementById("un-input").value;
+
+        const password =
+            document.getElementById("pw-input").value;
+
+        const result =
+            await window.pywebview.api.signup(username, password);
+
+        if (result == 0) {
+            window.location.href = "main.html";
+        }
+    }
+
+    function login() {
+        window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>

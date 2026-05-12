@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css">
+
+  <title>MrX</title>
+
+</head>
+
+<body>
+    <div id="main">
+        <div style="position: relative; display: flex; align-items: center; padding: 50px;">
+                
+            <h1 id="acc-hdr" style="margin: 0 auto;">Current accuracy: 100m</h1>
+
+            <button onclick="logout()" style="position: absolute; right: 50px;">
+                Log out
+            </button>
+
+        </div>
+
+        <div style="display: flex; justify-content: center; align-items: center; padding-top: 10px; padding-bottom: 20px">
+            <button id="acc-btn" onclick="set_accuracy()" style="margin-right: 10px; margin-left: 10px">
+                    Set Accuracy
+            </button>
+            <input type="text" id="acc-input" placeholder="Accuracy..." style="margin-right: 10px; margin-left: 10px">
+        </div>
+        <div style="display: flex; justify-content: center; align-items: center; padding: 20px">
+            <iframe id="map-frm" src="map.html" width="900px" height="600px" style="border: none;"></iframe>
+        </div>
+    </div>
+
+  <script>
+    async function set_accuracy() {
+        const acc =
+            document.getElementById("acc-input").value;
+
+        const result = await window.pywebview.api.set_accuracy(acc);
+
+        if (result == 0) {
+            document.getElementById("acc-hdr").innerText = "Current accuracy: " + acc +"m"
+        }
+    }
+
+    function logout() {
+        window.location.href = "login.html";
+    }
+    
+    setInterval(() => {
+        const frame = ocumnt.getElementById("map-frm");
+
+        frame.src = "map.html?t=" + Date.now()
+    }, 1000)
+  </script>
+
+</body>
+</html>
