@@ -13,7 +13,14 @@ class UserDBManager:
 
     def gen_salt_and_pw(self, password):
         salt = secrets.token_bytes(4)
+        pw_hash = self.gen_pw(password, salt)
 
+        salt_hex = salt.hex()
+        pw_hash_hex = pw_hash.hex()
+
+        return salt_hex, pw_hash_hex
+    
+    def gen_pw(self, password, salt):
         pw_hash = hashlib.pbkdf2_hmac(
             'sha256',
             password.encode('utf-8'),
@@ -21,10 +28,16 @@ class UserDBManager:
             100000
         )
 
-        salt_hex = salt.hex()
+        return pw_hash
+    
+    def is_valid_login(self, username, password):
+        user = self.get_user(username)
+        salt = bytes.fromhex(user[2])
+
+        pw_hash = self.gen_pw(password, salt)
         pw_hash_hex = pw_hash.hex()
 
-        return salt_hex, pw_hash_hex
+        return pw_hash_hex == user[3]
     
     def insert_user(self, username, role, password):
 

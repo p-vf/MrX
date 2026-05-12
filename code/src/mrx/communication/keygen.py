@@ -21,9 +21,10 @@ def get_or_generate_cert(keydir: Path, force_regen: bool =False):
             tf.write(b"[dn]\nCN=localhost\n[req]\ndistinguished_name = dn\n[EXT]\nsubjectAltName=DNS:localhost\nkeyUsage=digitalSignature\nextendedKeyUsage=serverAuth")
             print(tf.name)
             tf.close()
-            r = subprocess.run(f"openssl req -x509 -out {keydir/"localhost"}.crt -keyout {keydir/"localhost"}.key \
-                                -newkey rsa:2048 -nodes -sha256 \
-                                -subj \"/CN=localhost\" -extensions EXT -config {tf.name}").returncode
+            
+            r = subprocess.run(f"openssl req -x509 -out {keydir/"localhost.crt"} -keyout {keydir/"localhost.key"} \
+                                    -newkey rsa:2048 -nodes -sha256 \
+                                    -subj \"/CN=localhost\" -extensions EXT -config {tf.name}").returncode
             if r != 0:
                 raise Exception("subprocess failed")
             os.remove(tf.name)

@@ -1,10 +1,12 @@
 import sqlite3
 from .user_db import UserDBManager
+from .create_user_db import main as create_db
 
-NO_OF_TESTS = 6
+NO_OF_TESTS = 7
 
 class UserDBTest:
     def __init__(self):
+        create_db()
         self.db = UserDBManager("user.db")
         self.db.nuke_db()
 
@@ -29,6 +31,10 @@ class UserDBTest:
 
         assert chad[0] == "chad"
         assert chad[1] == 1
+
+    def test_check_login(self):
+        assert self.db.is_valid_login("chud", "chopped_1") == True
+        assert self.db.is_valid_login("chad", "chopped_1") == False
 
     def test_change_username(self):
         self.db.change_username("chud", "nothingeverhappens")
@@ -68,6 +74,7 @@ def main():
 
     test.test_insert()
     test.test_get()
+    test.test_check_login()
     test.test_change_username()
     test.test_change_password()
     test.test_change_role()
