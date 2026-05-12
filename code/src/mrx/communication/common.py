@@ -40,7 +40,6 @@ class Connection:
                 if len(self.size_buffer) < 8:
                     break
                 expected_bytes = decode_number(self.size_buffer)
-                print("expected length of package:", expected_bytes)
                 assert expected_bytes >= 0, "length of size_buffer not enough"
                 missing_bytes = expected_bytes - len(self.data_buffer)
                 if len(data) >= missing_bytes:

@@ -25,7 +25,11 @@ class Server:
         cert = get_or_generate_cert(self.keydir)
         print(cert)
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        context.load_cert_chain(self.keydir/"localhost.pem", self.keydir/"localhost.key")
+        try:
+            context.load_cert_chain(self.keydir/"localhost.crt", self.keydir/"localhost.key")
+        except FileNotFoundError as e:
+            print(f"files: {self.keydir/"localhost.crt"}, {self.keydir/"localhost.key"}")
+            raise e
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
             sock.bind(self.addr)
             sock.listen(5)

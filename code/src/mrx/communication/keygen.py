@@ -16,6 +16,7 @@ def generate_key(keydir: Path, keyname: str):
 
 def get_or_generate_cert(keydir: Path, force_regen: bool =False):
     if force_regen or not os.path.exists(keydir/"localhost.crt") or not os.path.exists(keydir/"localhost.key"):
+        os.makedirs(keydir, exist_ok=True)
         with tempfile.NamedTemporaryFile(mode="w+b", delete_on_close=False) as tf:
             tf.write(b"[dn]\nCN=localhost\n[req]\ndistinguished_name = dn\n[EXT]\nsubjectAltName=DNS:localhost\nkeyUsage=digitalSignature\nextendedKeyUsage=serverAuth")
             print(tf.name)
