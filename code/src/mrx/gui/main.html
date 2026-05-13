@@ -13,7 +13,7 @@
     <div id="main">
         <div style="position: relative; display: flex; align-items: center; padding: 50px;">
                 
-            <h1 id="acc-hdr" style="margin: 0 auto;">Current accuracy: 100m</h1>
+            <h1 id="acc-hdr" style="margin: 0 auto;">Current accuracy: 300m</h1>
 
             <button onclick="logout()" style="position: absolute; right: 50px;">
                 Log out
@@ -27,32 +27,41 @@
             </button>
             <input type="text" id="acc-input" placeholder="Accuracy..." style="margin-right: 10px; margin-left: 10px">
         </div>
-        <div style="display: flex; justify-content: center; align-items: center; padding: 20px">
+        <div style="display: flex; justify-content: center; align-items: center; padding: 20px;">
             <iframe id="map-frm" src="map.html" width="900px" height="600px" style="border: none;"></iframe>
         </div>
     </div>
 
   <script>
+    function init_map() {
+        const iframe = document.getElementById("map-frm");
+        iframe.contentWindow.init()
+    }
+
     async function set_accuracy() {
-        const acc =
-            document.getElementById("acc-input").value;
+        const acc = document.getElementById("acc-input").value;
 
         const result = await window.pywebview.api.set_accuracy(acc);
 
         if (result == 0) {
             document.getElementById("acc-hdr").innerText = "Current accuracy: " + acc +"m"
         }
+        update_map();
+    }
+
+    function update_map() {
+        const iframe = document.getElementById("map-frm");
+        iframe.contentWindow.update_map()
     }
 
     function logout() {
         window.location.href = "login.html";
     }
-    
-    setInterval(() => {
-        const frame = ocumnt.getElementById("map-frm");
 
-        frame.src = "map.html?t=" + Date.now()
-    }, 1000)
+    window.onload = function () {
+        init_map();
+        update_map();
+    };
   </script>
 
 </body>

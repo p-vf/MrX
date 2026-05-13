@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_65f15b45dd0a49712ef14fc95a290875 {
+                #map_7a379a552177e59766c9c58ea4e37d24 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -54,14 +54,85 @@
 <body>
     
     
-            <div class="folium-map" id="map_65f15b45dd0a49712ef14fc95a290875" ></div>
+        <script>
+            function getFoliumMap() {
+                return Object.values(window)
+                    .find(v => v && v instanceof L.Map);
+            }
+
+            async function init() {
+                window.map = getFoliumMap();
+                window.marker_lyr = L.layerGroup().addTo(map);
+
+                const response = await fetch("data.json");
+                const data = await response.json();
+
+                window.markers = new Map();
+            }
+
+            async function update_map() {
+
+                const response = await fetch("data.json");
+                const data = await response.json();
+
+                const client = data.client;
+                const users = data.users;
+
+                const client_id = `${client.pos[0]}-${client.pos[1]}-${client.acc}`;
+                const user_id = [];
+
+                for (let i = 0; i < users.length; i++) {
+                    user_id.push(`${users[i].pos[0]}-${users[i].pos[1]}-${users[i].acc}`)
+                }
+
+                if (!window.markers.has(client_id)) {
+                    let circle = L.circle(
+                        client.pos, {
+                        radius : client.acc,
+                        color : "green",
+                        fill : true
+                    }).addTo(window.marker_lyr);
+
+                    window.markers.set(client_id, circle)
+                }
+
+                for (let i = 0; i < users.length; i++) {
+                    if (!window.markers.has(user_id[i])) {
+                        let circle = L.circle(
+                            users[i].pos, {
+                            radius : users[i].acc,
+                            color : "blue",
+                            fill : true
+                        }).addTo(window.marker_lyr);
+
+                        window.markers.set(user_id[i], circle);
+                    }
+                }
+                
+                const keep = new Set([
+                    client_id,
+                    ...user_id
+                ]);
+
+                for (const id of window.markers.keys()) {
+
+                    if (!keep.has(id)) {
+                        window.marker_lyr.removeLayer(window.markers.get(id));
+                        window.markers.delete(id);
+                    } 
+                }
+            }
+        </script>
+        
+    
+            <div class="folium-map" id="map_7a379a552177e59766c9c58ea4e37d24" ></div>
         
 </body>
 <script>
     
     
-            var map_65f15b45dd0a49712ef14fc95a290875 = L.map(
-                "map_65f15b45dd0a49712ef14fc95a290875",
+            var map_7a379a552177e59766c9c58ea4e37d24 = L.map(
+                "map_7a379a552177e59766c9c58ea4e37d24",
                 {
                     center: [47.3769, 8.5417],
                     crs: L.CRS.EPSG3857,
@@ -78,7 +149,7 @@
 
         
     
-            var tile_layer_958bbe55967f2a63c4eeee19aaa4639e = L.tileLayer(
+            var tile_layer_8df3afeb7e5459e9e6dc8b4a1f431f79 = L.tileLayer(
                 "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
                 {
   "minZoom": 0,
@@ -95,13 +166,7 @@
             );
         
     
-            tile_layer_958bbe55967f2a63c4eeee19aaa4639e.addTo(map_65f15b45dd0a49712ef14fc95a290875);
-        
-    
-            var circle_171ae4555633d18f65df1ed00f0070fb = L.circle(
-                [47.3745, 8.5445],
-                {"bubblingMouseEvents": true, "color": "blue", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "blue", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 1000, "stroke": true, "weight": 3}
-            ).addTo(map_65f15b45dd0a49712ef14fc95a290875);
+            tile_layer_8df3afeb7e5459e9e6dc8b4a1f431f79.addTo(map_7a379a552177e59766c9c58ea4e37d24);
         
 </script>
 </html>
