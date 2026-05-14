@@ -7,6 +7,8 @@ import selectors
 from .common import StateHandler, Connection
 
 from .keygen import generate_key, get_or_generate_cert
+from ..logic.quadtree import QuadTreeNode, Rectangle
+
 
 def main() -> None:
     print(f"PID: {os.getpid()}")
@@ -19,6 +21,9 @@ class Server:
         self.addr = (hostname, port)
         self.keydir = keydir
         self.sel = selectors.DefaultSelector()
+
+        world = Rectangle(0, 0, 100, 100)
+        self.quadtree = QuadTreeNode(world)
         pass
 
     def start(self):
@@ -47,6 +52,7 @@ class Server:
         print("new connection with address:", addr)
         conn.setblocking(False)
         handler = EchoStateHandler()
+        # handler = LocationStateHandler(self.quadtree)
         connection = Connection(handler, self.sel)
         self.sel.register(conn, selectors.EVENT_READ, connection.read)
 

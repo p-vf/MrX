@@ -47,5 +47,12 @@ class ClientStateHandler(StateHandler):
         reply = input("> ").encode()
         reply_callback(reply)
 
+        # Implementation of the answer of the client could be structured like that
+        # msg = {
+        #     "vertical": vertical,
+        #     "horizontal": horizontal,
+        #     "continue": True
+        # }
+
     def end(self):
         print("server closed connection")
