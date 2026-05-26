@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_7a379a552177e59766c9c58ea4e37d24 {
+                #map_e2720d0a24879112362dacf41a1b3b03 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -70,71 +70,89 @@
                 window.markers = new Map();
             }
 
-            async function update_map() {
+            async function update_map(user, others) {
+                console.log(user);
+                console.log(others);
 
-                const response = await fetch("data.json");
-                const data = await response.json();
+                const user_id = user[0];
+                const others_id = others.map(o => o[0]);
 
-                const client = data.client;
-                const users = data.users;
+                let new_user_c = L.circle(
+                    user[1], {
+                    radius : user[2],
+                    color : "green",
+                    fill : true
+                })
 
-                const client_id = `${client.pos[0]}-${client.pos[1]}-${client.acc}`;
-                const user_id = [];
-
-                for (let i = 0; i < users.length; i++) {
-                    user_id.push(`${users[i].pos[0]}-${users[i].pos[1]}-${users[i].acc}`)
+                if (!window.markers.has(user_id)) {
+                    new_user_c.addTo(window.marker_lyr);
+                    window.markers.set(user_id, new_user_c);
+                } else {
+                    let old_user_c = window.markers.get(user_id);
+                    if (
+                        old_user_c.getLatLng() != new_user_c.getLatLng() ||
+                        old_user_c.getRadius() != new_user_c.getRadius()
+                        ) {
+                        new_user_c.addTo(window.marker_lyr);
+                        window.marker_lyr.removeLayer(window.markers.get(user_id))
+                        window.markers.set(user_id, new_user_c);
+                    }
                 }
 
-                if (!window.markers.has(client_id)) {
-                    let circle = L.circle(
-                        client.pos, {
-                        radius : client.acc,
-                        color : "green",
+                for (let i = 0; i < others.length; i++) {
+                    let new_other_c = L.circle(
+                        others[i][1], {
+                        radius : others[i][2],
+                        color : "blue",
                         fill : true
-                    }).addTo(window.marker_lyr);
+                    })
 
-                    window.markers.set(client_id, circle)
-                }
-
-                for (let i = 0; i < users.length; i++) {
-                    if (!window.markers.has(user_id[i])) {
-                        let circle = L.circle(
-                            users[i].pos, {
-                            radius : users[i].acc,
-                            color : "blue",
-                            fill : true
-                        }).addTo(window.marker_lyr);
-
-                        window.markers.set(user_id[i], circle);
+                    if (!window.markers.has(others_id[i])) {
+                        new_other_c.addTo(window.marker_lyr);
+                        window.markers.set(others_id[i], new_other_c);
+                    } else {
+                        let old_other_c = window.markers.get(others_id[i]);
+                        if (
+                            old_other_c.getLatLng() != new_other_c.getLatLng() ||
+                            old_other_c.getRadius() != new_other_c.getRadius()
+                            ) {
+                            new_other_c.addTo(window.marker_lyr);
+                            window.marker_lyr.removeLayer(window.markers.get(others_id[i]))
+                            window.markers.set(others_id[i], new_other_c);
+                        }
                     }
                 }
                 
                 const keep = new Set([
-                    client_id,
-                    ...user_id
+                    user_id,
+                    ...others_id
                 ]);
 
                 for (const id of window.markers.keys()) {
-
                     if (!keep.has(id)) {
                         window.marker_lyr.removeLayer(window.markers.get(id));
                         window.markers.delete(id);
-                    } 
+                    } else {
+                        window.markers.get(id).bindTooltip(id, {
+                            permanent : true,
+                            direction : 'top'
+                        }).openTooltip();
+                    }
                 }
             }
         </script>
         
     
-            <div class="folium-map" id="map_7a379a552177e59766c9c58ea4e37d24" ></div>
+            <div class="folium-map" id="map_e2720d0a24879112362dacf41a1b3b03" ></div>
         
 </body>
 <script>
     
     
-            var map_7a379a552177e59766c9c58ea4e37d24 = L.map(
-                "map_7a379a552177e59766c9c58ea4e37d24",
+            var map_e2720d0a24879112362dacf41a1b3b03 = L.map(
+                "map_e2720d0a24879112362dacf41a1b3b03",
                 {
-                    center: [47.3769, 8.5417],
+                    center: [47.3745, 8.5445],
                     crs: L.CRS.EPSG3857,
                     ...{
   "zoom": 12,
@@ -149,7 +167,7 @@
 
         
     
-            var tile_layer_8df3afeb7e5459e9e6dc8b4a1f431f79 = L.tileLayer(
+            var tile_layer_a7342e95f8ab06c6f0802bbd555b9f2f = L.tileLayer(
                 "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
                 {
   "minZoom": 0,
@@ -166,7 +184,7 @@
             );
         
     
-            tile_layer_8df3afeb7e5459e9e6dc8b4a1f431f79.addTo(map_7a379a552177e59766c9c58ea4e37d24);
+            tile_layer_a7342e95f8ab06c6f0802bbd555b9f2f.addTo(map_e2720d0a24879112362dacf41a1b3b03);
         
 </script>
 </html>

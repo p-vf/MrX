@@ -52,16 +52,30 @@
         const password =
             document.getElementById("pw-input").value;
 
-        const result =
-            await window.pywebview.api.login(username, password);
+        await window.pywebview.api.update_client_login(username, password);
+    }
 
-        if (result == 0) {
-            window.location.href = "main.html";
+    function update_location(location) {
+        console.log(location)
+        let path = ""
+
+        switch(location) {
+            case 0:
+                path = "login.html";
+                break;
+            case 1:
+                path = "signup.html";
+                break;
+            case 2:
+                path = "main.html";
+                break;
         }
+
+        window.location.href = path;
     }
 
     function signup() {
-        window.location.href = "signup.html";
+        window.pywebview.api.update_client_location(1);
     }
   </script>
 

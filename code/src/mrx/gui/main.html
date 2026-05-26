@@ -33,6 +33,19 @@
     </div>
 
   <script>
+    function wait_for_py() {
+        return new Promise((resolve) => {
+            if (window.pywebview) {
+                resolve();
+                return;
+            }
+
+            window.addEventListener('pywebviewready', () => {
+                resolve();
+            });
+        });
+    }
+
     function init_map() {
         const iframe = document.getElementById("map-frm");
         iframe.contentWindow.init()
@@ -40,27 +53,46 @@
 
     async function set_accuracy() {
         const acc = document.getElementById("acc-input").value;
-
-        const result = await window.pywebview.api.set_accuracy(acc);
-
-        if (result == 0) {
-            document.getElementById("acc-hdr").innerText = "Current accuracy: " + acc +"m"
-        }
-        update_map();
+        await window.pywebview.api.update_client_accuracy(acc);
     }
 
-    function update_map() {
+    function update_map(user, others) {
         const iframe = document.getElementById("map-frm");
-        iframe.contentWindow.update_map()
+        iframe.contentWindow.update_map(user, others)
     }
 
-    function logout() {
-        window.location.href = "login.html";
+    function update_location(location) {
+        let path = ""
+
+        switch(location) {
+            case 0:
+                path = "login.html";
+                break;
+            case 1:
+                path = "signup.html";
+                break;
+            case 2:
+                path = "main.html";
+                break;
+        }
+
+        window.location.href = path;
     }
 
-    window.onload = function () {
+    function update_accuracy(accuracy) {
+        const hdr = document.getElementById("acc-hdr");
+        hdr.innerText = "Current accuracy: " + accuracy + "m"
+    }
+
+    async function logout() {
+        await window.pywebview.api.update_client_location(0);
+    }
+
+    window.onload = async function () {
         init_map();
-        update_map();
+
+        await wait_for_py();
+        await window.pywebview.api.update_client_init_map();
     };
   </script>
 

@@ -1,7 +1,8 @@
 import webview
 import os
 import folium
-import json
+import time
+import queue
 
 BACKGROUND = "#1e1e1e"
 BUTTON = "#3a3a3a"
@@ -9,19 +10,81 @@ BUTTON_PRESS = "#505050"
 TEXT = "#ffffff"
 
 class Gui:
-    def __init__(self, client, users):
+    def __init__(self, client):
         path = os.path.abspath("src/mrx/gui/login.html")
-        self.api = Api(client, users)
+        self.changes = queue.Queue()
+        self.updates = queue.Queue()
+        self.online = True
+
+        self.api = Api(self.changes)
+        self.client = client
 
         self.window = webview.create_window(
             "MrX",
             path,
-            js_api = self.api
+            js_api = self.api,
         )
 
-    def run(self):
-        self.api.update_map()
-        webview.start(debug=True)
+        self.window.events.closed += self.on_closed
+        self.generate_map([47.3745, 8.5445], 12)
+    
+    def get_update_queue(self):
+        return self.updates
+
+    def on_closed(self):
+        self.updates.put((-1,))
+
+    def start(self):
+        webview.start(debug=True, func=self.communication)
+    
+    def communication(self):
+        while self.online:
+            self.check_changes()
+            self.check_updates()
+            time.sleep(0.1)
+    
+    def check_changes(self):
+        try:
+            change = self.changes.get(block=False)
+
+            match change[0]:
+                case 0:
+                    self.client.handle_location(change[1])
+                case 1:
+                    self.client.handle_login(change[1], change[2])
+                case 2:
+                    self.client.handle_signup(change[1], change[2])
+                case 3:
+                    self.client.handle_accuracy(change[1])
+                case 4:
+                    self.client.handle_init_map()
+        except queue.Empty:
+            pass
+
+    def check_updates(self):
+        try:
+            update = self.updates.get(block=False)
+
+            match update[0]:
+                case -1:
+                    self.online = False
+                case 0:
+                    self.update_location(update[1])
+                case 1:
+                    self.update_map(update[1], update[2])
+                case 2:
+                    self.update_accuracy(update[1])
+        except queue.Empty:
+            pass
+    
+    def update_location(self, location):
+        self.window.evaluate_js(f"update_location({location})")
+    
+    def update_map(self, user, others):
+        self.window.evaluate_js(f"update_map({user}, {others})")
+    
+    def update_accuracy(self, accuracy):
+        self.window.evaluate_js(f"update_accuracy({accuracy})")
 
     def generate_map(self, location, zoom):
         map = folium.Map(
@@ -47,120 +110,96 @@ class Gui:
                 window.markers = new Map();
             }
 
-            async function update_map() {
+            async function update_map(user, others) {
+                console.log(user);
+                console.log(others);
 
-                const response = await fetch("data.json");
-                const data = await response.json();
+                const user_id = user[0];
+                const others_id = others.map(o => o[0]);
 
-                const client = data.client;
-                const users = data.users;
+                let new_user_c = L.circle(
+                    user[1], {
+                    radius : user[2],
+                    color : "green",
+                    fill : true
+                })
 
-                const client_id = `${client.pos[0]}-${client.pos[1]}-${client.acc}`;
-                const user_id = [];
-
-                for (let i = 0; i < users.length; i++) {
-                    user_id.push(`${users[i].pos[0]}-${users[i].pos[1]}-${users[i].acc}`)
+                if (!window.markers.has(user_id)) {
+                    new_user_c.addTo(window.marker_lyr);
+                    window.markers.set(user_id, new_user_c);
+                } else {
+                    let old_user_c = window.markers.get(user_id);
+                    if (
+                        old_user_c.getLatLng() != new_user_c.getLatLng() ||
+                        old_user_c.getRadius() != new_user_c.getRadius()
+                        ) {
+                        new_user_c.addTo(window.marker_lyr);
+                        window.marker_lyr.removeLayer(window.markers.get(user_id))
+                        window.markers.set(user_id, new_user_c);
+                    }
                 }
 
-                if (!window.markers.has(client_id)) {
-                    let circle = L.circle(
-                        client.pos, {
-                        radius : client.acc,
-                        color : "green",
+                for (let i = 0; i < others.length; i++) {
+                    let new_other_c = L.circle(
+                        others[i][1], {
+                        radius : others[i][2],
+                        color : "blue",
                         fill : true
-                    }).addTo(window.marker_lyr);
+                    })
 
-                    window.markers.set(client_id, circle)
-                }
-
-                for (let i = 0; i < users.length; i++) {
-                    if (!window.markers.has(user_id[i])) {
-                        let circle = L.circle(
-                            users[i].pos, {
-                            radius : users[i].acc,
-                            color : "blue",
-                            fill : true
-                        }).addTo(window.marker_lyr);
-
-                        window.markers.set(user_id[i], circle);
+                    if (!window.markers.has(others_id[i])) {
+                        new_other_c.addTo(window.marker_lyr);
+                        window.markers.set(others_id[i], new_other_c);
+                    } else {
+                        let old_other_c = window.markers.get(others_id[i]);
+                        if (
+                            old_other_c.getLatLng() != new_other_c.getLatLng() ||
+                            old_other_c.getRadius() != new_other_c.getRadius()
+                            ) {
+                            new_other_c.addTo(window.marker_lyr);
+                            window.marker_lyr.removeLayer(window.markers.get(others_id[i]))
+                            window.markers.set(others_id[i], new_other_c);
+                        }
                     }
                 }
                 
                 const keep = new Set([
-                    client_id,
-                    ...user_id
+                    user_id,
+                    ...others_id
                 ]);
 
                 for (const id of window.markers.keys()) {
-
                     if (!keep.has(id)) {
                         window.marker_lyr.removeLayer(window.markers.get(id));
                         window.markers.delete(id);
-                    } 
+                    } else {
+                        window.markers.get(id).bindTooltip(id, {
+                            permanent : true,
+                            direction : 'top'
+                        }).openTooltip();
+                    }
                 }
             }
         </script>
         """
         map.get_root().html.add_child(folium.Element(js))
         map.save("src/mrx/gui/map.html")
-
-    def update_map(self, client, users):
-        self.api.set_client(client)
-        self.api.set_users(users)
-        self.api.update_map()
     
 class Api:
-    # Make thread safe
-    def __init__(self, client, users):
-        self.users = users
-        self.client = client
-        self.username = ""
-        self.password = ""
+    def __init__(self, changes):
+        self.changes = changes
 
-    def login(self, username, password):
-        self.username = username
-        self.password = password
-        return 0
-    
-    def signup(self, username, password):
-        self.username = username
-        self.password = password
-        return 0
-    
-    def set_accuracy(self, accuracy):
-        try:
-            self.client = (self.client[0], int(accuracy))
-            self.update_map()
-            return 0
-        except:
-            return 1
-    
-    def set_client(self, client):
-        self.client = client
-    
-    def set_users(self, users):
-        self.users = users
-        
-    def update_map(self):
-        data = {
-            "client" : {
-                "pos" : self.client[0],
-                "acc" : self.client[1]
-            },
-            "users": [
-                {"pos": user[0], "acc": user[1]} for user in self.users
-            ]
-        }
+    def update_client_location(self, location):
+        self.changes.put((0, location))
 
-        path = os.path.abspath("src\mrx\gui\data.json")
-        with open(path, "w") as f:
-            json.dump(data, f)
-
-def main():
-    location = [47.3769, 8.5417]
-    users = [([47.3745, 8.5445], 200)]
-    client = (([47.373, 8.545], 300))
-
-    gui = Gui(client, users)
-    gui.generate_map(location, 12)
-    gui.run()
+    def update_client_login(self, username, password):
+        self.changes.put((1, username, password))
+    
+    def update_client_signup(self, username, password):
+        self.changes.put((2, username, password))
+    
+    def update_client_accuracy(self, accuracy):
+        self.changes.put((3, accuracy))
+    
+    def update_client_init_map(self):
+        self.changes.put((4,))
