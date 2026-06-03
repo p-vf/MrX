@@ -1,10 +1,11 @@
 import sqlite3
 import hashlib
 import secrets
+from pathlib import Path
 
 class UserDBManager:
 
-    def __init__(self, database):
+    def __init__(self, database: Path):
         self.conn = sqlite3.connect(database)
         self.cur = self.conn.cursor()
 
@@ -30,8 +31,10 @@ class UserDBManager:
 
         return pw_hash
     
-    def is_valid_login(self, username, password):
+    def is_valid_login(self, username: str, password: str):
         user = self.get_user(username)
+        if user is None:
+            return False
         salt = bytes.fromhex(user[2])
 
         pw_hash = self.gen_pw(password, salt)
@@ -39,7 +42,7 @@ class UserDBManager:
 
         return pw_hash_hex == user[3]
     
-    def insert_user(self, username, role, password):
+    def insert_user(self, username: str, role: int, password: str):
 
         salt_hex, pw_hash_hex = self.gen_salt_and_pw(password)
 
@@ -51,6 +54,7 @@ class UserDBManager:
             self.conn.commit()
         except sqlite3.Error as e:
             print(e)
+            return e
 
     def get_user(self, username):
         get = "SELECT * FROM users Where username = ?"

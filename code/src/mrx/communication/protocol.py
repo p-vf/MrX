@@ -1,25 +1,28 @@
-from enum import Enum
+import enum
 from typing import TypeVar
 import base64
 
-class ServerMessageType(Enum):
+@enum.unique
+class ServerMessageType(enum.Enum):
     LOGIN_SUCCESSFUL = 0
-    LOGIN_FAILED = 0
+    LOGIN_FAILED = 1
+    SIGNUP_SUCCESSFUL = 2
+    SIGNUP_FAILED = 3
 
-class ClientMessageType(Enum):
+@enum.unique
+class ClientMessageType(enum.Enum):
     LOGIN = 0
+    SIGNUP = 1
 
 def encode_msg(message_type: ServerMessageType | ClientMessageType, data: list[str]) -> bytes:
     # TODO instead of sending the enum name, we could send the number that identifies this enum
     return f"{message_type.name} {" ".join(list(map(lambda x: base64.b64encode(x.encode()).decode(), data)))}".encode()
 
 T = TypeVar("T")
-def parse_msg[T: Enum](msg: bytes, enumtype: type[T]) -> tuple[tuple[T | None, list[str]], str]:
-    if b" " in msg:
-        msg_type, data = msg.split(b" ", 1)
-    else:
-        msg_type = msg
-        data = b""
+def parse_msg[T: enum.Enum](msg: bytes, enumtype: type[T]) -> tuple[tuple[T | None, list[str]], str]:
+    if b" " not in msg:
+        return (None, []), "invalid message: {msg}"
+    msg_type, data = msg.split(b" ", 1)
     msg_type_parsed = None
     err = ""
     try:

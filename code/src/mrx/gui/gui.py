@@ -56,6 +56,7 @@ class Gui:
     def check_changes(self):
         try:
             change = self.changes.get(block=False)
+            print(f"change: {change}")
             match change.kind:
                 case ChangeKind.LOCATION_UPDATE:
                     assert len(change.attrs) == 1
@@ -95,8 +96,8 @@ class Gui:
         except queue.Empty:
             pass
 
-    def update_location(self, location):
-        self.window.evaluate_js(f"update_location({location})")
+    def update_location(self, location: LocationKind):
+        self.window.evaluate_js(f"update_location({location.value})")
 
     def update_map(self, user, others):
         self.window.evaluate_js(f"update_map({user}, {others})")
@@ -209,10 +210,11 @@ class Api:
     def __init__(self, changes: queue.Queue[Change]):
         self.changes = changes
 
-    def update_client_location(self, location):
-        self.changes.put(Change(ChangeKind.LOCATION_UPDATE, (location,)))
+    def update_client_location(self, location_int: int):
+        self.changes.put(Change(ChangeKind.LOCATION_UPDATE, (from_number(LocationKind, location_int),)))
 
     def update_client_login(self, username, password):
+        print("update_client_login fired")
         self.changes.put(Change(ChangeKind.LOGIN_TRIGGER, (username, password)))
 
     def update_client_signup(self, username, password):

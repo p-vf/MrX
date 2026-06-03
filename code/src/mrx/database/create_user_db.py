@@ -1,7 +1,11 @@
 import sqlite3
+from pathlib import Path
 
 def main():
-    conn = sqlite3.connect("user.db")
+    create_user_db(Path("users.db"))
+
+def create_user_db(dbpath: Path):
+    conn = sqlite3.connect(dbpath)
     cursor = conn.cursor()
 
     # role: 0 user, 1 admin

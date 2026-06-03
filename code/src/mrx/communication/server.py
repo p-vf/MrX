@@ -7,6 +7,8 @@ import selectors
 from .common import StateHandler, Connection
 import asyncio
 from communication.protocol import ClientMessageType, ServerMessageType, parse_client_msg, encode_msg
+from database.create_user_db import create_user_db
+from database.user_db import UserDBManager
 
 from .keygen import generate_key, get_or_generate_cert
 from ..logic.quadtree import QuadTreeNode, Rectangle
@@ -24,9 +26,10 @@ def main() -> None:
 
 
 class Server(asyncio.Protocol):
-    def __init__(self):
+    def __init__(self, db_manager: UserDBManager):
         self.loop = asyncio.get_running_loop()
         self.peername = None
+        self.db_manager = db_manager
 
     # ==== START methods from asyncio.Protocol ====
     def connection_made(self, transport):
@@ -52,12 +55,32 @@ class Server(asyncio.Protocol):
         match msg_type:
             case ClientMessageType.LOGIN:
                 print(f"login attempt: {msg}")
-                # TODO implement check with login database here
-                login_successful = True
+                login_successful = self.db_manager.is_valid_login(msg[0], msg[1])
                 if login_successful:
                     self.send(encode_msg(ServerMessageType.LOGIN_SUCCESSFUL, []))
                 else:
-                    self.send(encode_msg(ServerMessageType.LOGIN_FAILED, ["user not in database"]))
+                    if self.db_manager.get_user(msg[0]) is None:
+                        self.send(encode_msg(ServerMessageType.LOGIN_FAILED, ["user not in database"]))
+                    else:
+                        self.send(encode_msg(ServerMessageType.LOGIN_FAILED, ["wrong password"]))
+                # TODO change the state of this connection (user is now logged in)
+            case ClientMessageType.SIGNUP:
+                print(f"signup attempt: {msg}")
+                username = msg[0]
+                pwd = msg[1]
+                assert isinstance(username, str)
+                assert isinstance(pwd, str)
+                if self.db_manager.get_user(username) is not None:
+                    print(f"user {msg[0]} already in database")
+                    self.send(encode_msg(ServerMessageType.SIGNUP_FAILED, ["username already taken"]))
+                    return
+                err = self.db_manager.insert_user(username, 0, pwd)
+                if err:
+                    self.send(encode_msg(ServerMessageType.SIGNUP_FAILED, ["db error"]))
+                    print(f"db error: {err}")
+                    return
+                self.send(encode_msg(ServerMessageType.SIGNUP_SUCCESSFUL, []))
+                # TODO change the state of this connection (user is now logged in or smthn)
             case x:
                 print(f"Message type {x} not handled yet")
 
@@ -70,7 +93,12 @@ class Server(asyncio.Protocol):
         print(f"sending {msg}")
         self.transport.write(msg)
 
+userdatabase_path = Path("serverdata") / "users.db"
 async def start_server():
+    os.makedirs(userdatabase_path.parent, exist_ok = True)
+    create_user_db(userdatabase_path)
+    manager = UserDBManager(userdatabase_path)
+    print("created user database")
     loop = asyncio.get_running_loop()
 
     keydir = Path("keys")
@@ -84,7 +112,7 @@ async def start_server():
         raise e
 
     server = await loop.create_server(
-        Server,
+        lambda: Server(manager),
         'localhost', 8443
         , ssl=context
         )

@@ -87,8 +87,14 @@ class Client(BaseClient):
         end.set()
 
     @override
-    def handle_location(self, location):
-        print("TODO implement handle_location")
+    def handle_location(self, location: LocationKind):
+        assert isinstance(location, LocationKind)
+        match location:
+            case LocationKind.SIGNUP | LocationKind.LOGIN:
+                assert self._model is not None
+                self._model.update_location(location)
+            case x:
+                print(f"TODO implement handle_location case {x}")
 
     @override
     def handle_login(self, username, password):
@@ -97,7 +103,8 @@ class Client(BaseClient):
 
     @override
     def handle_signup(self, username, password):
-        print("TODO implement handle_signup")
+        assert self.protocol is not None
+        self.protocol.send(encode_msg(ClientMessageType.SIGNUP, [username, password]))
 
     @override
     def handle_accuracy(self, accuracy):
@@ -141,11 +148,16 @@ class ClientProtocol:
         match msg_type:
             case ServerMessageType.LOGIN_SUCCESSFUL:
                 print(f"successfully logged in!")
-                self.model.update_location(LocationKind.MAIN.value)
+                self.model.update_location(LocationKind.MAIN)
             case ServerMessageType.LOGIN_FAILED:
                 print(f"login failed.. reason: {msg}")
+            case ServerMessageType.SIGNUP_SUCCESSFUL:
+                print(f"successfully signed up!")
+                self.model.update_location(LocationKind.MAIN)
+            case ServerMessageType.SIGNUP_FAILED:
+                print(f"login failed.. reason: {msg}")
             case x:
-                print(f"Message type {x} not handled yet")
+                print(f"TODO Message type {x} not handled yet")
 
     def eof_received(self):
         print("connection lost: other side closed connection")

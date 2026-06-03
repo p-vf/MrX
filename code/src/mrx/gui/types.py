@@ -25,7 +25,7 @@ class BaseModel:
         pass
 
     @abstractmethod
-    def update_location(self, location):
+    def update_location(self, location: LocationKind):
         pass
 
     @abstractmethod

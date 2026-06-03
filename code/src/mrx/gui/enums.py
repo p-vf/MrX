@@ -14,6 +14,9 @@ class Change:
         self.kind = kind
         self.attrs = attrs
 
+    def __repr__(self):
+        return f"Change({self.kind}, {self.attrs})"
+
 @unique
 class LocationKind(Enum):
     # NOTE when updating this enum, make sure you also update the switch case statement in main.html and all the other ones
@@ -24,11 +27,11 @@ class LocationKind(Enum):
 def from_number(cls: type[Enum], n: int):
     if not hasattr(cls, "_mapping") or cls._mapping is None: # type: ignore
         cls._mapping = {} # type: ignore
-        mapping = dir(ChangeKind)
+        mapping = dir(cls)
         for attr in mapping:
             if attr.startswith("_"):
                 continue
-            cls._mapping[ChangeKind[attr].value] = ChangeKind[attr] # type: ignore
+            cls._mapping[cls[attr].value] = cls[attr] # type: ignore
     res = cls._mapping.get(n) # type: ignore
     if res is None:
         assert False, f"number {n} is not in enum {cls}. {cls._mapping}" # type: ignore
