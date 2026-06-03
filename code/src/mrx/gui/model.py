@@ -1,6 +1,7 @@
 from .gui import Gui
+from gui.types import BaseModel
 
-class Model:
+class Model(BaseModel):
     def __init__(self, client):
         self.location = 0
         self.user = []
@@ -9,6 +10,9 @@ class Model:
         self.gui = Gui(client)
         self.updates = self.gui.get_update_queue()
     
+    def start_gui(self):
+        self.gui.start()
+
     def get_user(self):
         return self.user
     

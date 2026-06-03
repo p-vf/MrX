@@ -1,8 +1,15 @@
 import webview
+import branca
 import os
 import folium
 import time
 import queue
+from typing import Any
+import threading
+
+from gui.types import BaseClient
+from gui.enums import LocationKind, ChangeKind, from_number, Change
+
 
 BACKGROUND = "#1e1e1e"
 BUTTON = "#3a3a3a"
@@ -10,24 +17,27 @@ BUTTON_PRESS = "#505050"
 TEXT = "#ffffff"
 
 class Gui:
-    def __init__(self, client):
+    def __init__(self, client: BaseClient):
         path = os.path.abspath("src/mrx/gui/login.html")
-        self.changes = queue.Queue()
-        self.updates = queue.Queue()
+        self.changes: queue.Queue[Change] = queue.Queue()
+        self.updates: queue.Queue[tuple] = queue.Queue()
         self.online = True
 
         self.api = Api(self.changes)
         self.client = client
 
-        self.window = webview.create_window(
+        w = webview.create_window(
             "MrX",
             path,
             js_api = self.api,
         )
+        if w is None:
+            raise Exception("Window could not be created")
+        self.window = w
 
         self.window.events.closed += self.on_closed
         self.generate_map([47.3745, 8.5445], 12)
-    
+
     def get_update_queue(self):
         return self.updates
 
@@ -36,28 +46,34 @@ class Gui:
 
     def start(self):
         webview.start(debug=True, func=self.communication)
-    
+
     def communication(self):
         while self.online:
             self.check_changes()
             self.check_updates()
             time.sleep(0.1)
-    
+
     def check_changes(self):
         try:
             change = self.changes.get(block=False)
-
-            match change[0]:
-                case 0:
-                    self.client.handle_location(change[1])
-                case 1:
-                    self.client.handle_login(change[1], change[2])
-                case 2:
-                    self.client.handle_signup(change[1], change[2])
-                case 3:
-                    self.client.handle_accuracy(change[1])
-                case 4:
+            match change.kind:
+                case ChangeKind.LOCATION_UPDATE:
+                    assert len(change.attrs) == 1
+                    self.client.handle_location(*change.attrs)
+                case ChangeKind.LOGIN_TRIGGER:
+                    assert len(change.attrs) == 2
+                    self.client.handle_login(*change.attrs)
+                case ChangeKind.SIGNUP_TRIGGER:
+                    assert len(change.attrs) == 2
+                    self.client.handle_signup(*change.attrs)
+                case ChangeKind.ACCURACY_UPDATE:
+                    assert len(change.attrs) == 1
+                    self.client.handle_accuracy(*change.attrs)
+                case ChangeKind.MAP_INIT:
+                    assert len(change.attrs) == 0
                     self.client.handle_init_map()
+                case x:
+                    assert False, f"unreachable: {x} not handled"
         except queue.Empty:
             pass
 
@@ -74,15 +90,17 @@ class Gui:
                     self.update_map(update[1], update[2])
                 case 2:
                     self.update_accuracy(update[1])
+                case x:
+                    assert False, f"unreachable: {x} not handled"
         except queue.Empty:
             pass
-    
+
     def update_location(self, location):
         self.window.evaluate_js(f"update_location({location})")
-    
+
     def update_map(self, user, others):
         self.window.evaluate_js(f"update_map({user}, {others})")
-    
+
     def update_accuracy(self, accuracy):
         self.window.evaluate_js(f"update_accuracy({accuracy})")
 
@@ -162,7 +180,7 @@ class Gui:
                         }
                     }
                 }
-                
+
                 const keep = new Set([
                     user_id,
                     ...others_id
@@ -182,24 +200,29 @@ class Gui:
             }
         </script>
         """
-        map.get_root().html.add_child(folium.Element(js))
+        root = map.get_root()
+        assert isinstance(root, branca.element.Figure), f"unexpected element type of root: {type(root)}"
+        root.html.add_child(folium.Element(js))
         map.save("src/mrx/gui/map.html")
-    
+
 class Api:
-    def __init__(self, changes):
+    def __init__(self, changes: queue.Queue[Change]):
         self.changes = changes
 
     def update_client_location(self, location):
-        self.changes.put((0, location))
+        self.changes.put(Change(ChangeKind.LOCATION_UPDATE, (location,)))
 
     def update_client_login(self, username, password):
-        self.changes.put((1, username, password))
-    
+        self.changes.put(Change(ChangeKind.LOGIN_TRIGGER, (username, password)))
+
     def update_client_signup(self, username, password):
-        self.changes.put((2, username, password))
-    
+        self.changes.put(Change(ChangeKind.SIGNUP_TRIGGER, (username, password)))
+
     def update_client_accuracy(self, accuracy):
-        self.changes.put((3, accuracy))
-    
+        self.changes.put(Change(ChangeKind.ACCURACY_UPDATE, (accuracy,)))
+
     def update_client_init_map(self):
-        self.changes.put((4,))
+        self.changes.put(Change(ChangeKind.MAP_INIT, ()))
+
+    def close_client(self):
+        self.changes.put(Change(ChangeKind.CLOSE_WINDOW, ()))

@@ -5,6 +5,8 @@ import socket
 import os
 import selectors
 from .common import StateHandler, Connection
+import asyncio
+from communication.protocol import ClientMessageType, ServerMessageType, parse_client_msg, encode_msg
 
 from .keygen import generate_key, get_or_generate_cert
 from ..logic.quadtree import QuadTreeNode, Rectangle
@@ -12,11 +14,86 @@ from ..logic.quadtree import QuadTreeNode, Rectangle
 
 def main() -> None:
     print(f"PID: {os.getpid()}")
-    # use socket.gethostname() instead of "localhost" if used for real
-    s = Server("localhost", 8443, Path("keys"))
-    s.start()
+    asyncio.run(start_server())
+    # # use socket.gethostname() instead of "localhost" if used for real
+    # host = "localhost"
+    # port = 8443
+    # print(f"listening on address ({host}, {port})")
+    # s = ServerOld("localhost", 8443, Path("keys"))
+    # s.start()
 
-class Server:
+
+class Server(asyncio.Protocol):
+    def __init__(self):
+        self.loop = asyncio.get_running_loop()
+        self.peername = None
+
+    # ==== START methods from asyncio.Protocol ====
+    def connection_made(self, transport):
+        assert isinstance(transport, asyncio.WriteTransport)
+        self.peername = transport.get_extra_info("peername")
+        print(f"connection from {self.peername}")
+        self.transport = transport
+
+    def connection_lost(self, exc):
+        if exc is None:
+            print("connection closed because of EOF being reached or because this side closed it")
+        else:
+            print("connection closed by exception:", exc)
+
+    def data_received(self, data: bytes):
+        # TODO parse data correctly so that arbitrary splits in the stream are handled
+        print(f"received: {data} from {self.peername}")
+        unparsed_msg = data
+        (msg_type, msg), err = parse_client_msg(unparsed_msg)
+        if err:
+            print(f"parsing of message {unparsed_msg} failed: {err}")
+            return
+        match msg_type:
+            case ClientMessageType.LOGIN:
+                print(f"login attempt: {msg}")
+                # TODO implement check with login database here
+                login_successful = True
+                if login_successful:
+                    self.send(encode_msg(ServerMessageType.LOGIN_SUCCESSFUL, []))
+                else:
+                    self.send(encode_msg(ServerMessageType.LOGIN_FAILED, ["user not in database"]))
+            case x:
+                print(f"Message type {x} not handled yet")
+
+    def eof_received(self):
+        print("other party closed connection")
+    # ==== END methods from asyncio.Protocol ====
+
+    def send(self, msg: bytes):
+        # TODO add length of package to it before sending it
+        print(f"sending {msg}")
+        self.transport.write(msg)
+
+async def start_server():
+    loop = asyncio.get_running_loop()
+
+    keydir = Path("keys")
+    cert = get_or_generate_cert(keydir)
+    print(cert)
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    try:
+        context.load_cert_chain(keydir/"localhost.crt", keydir/"localhost.key")
+    except FileNotFoundError as e:
+        print(f"files: {keydir/"localhost.crt"}, {keydir/"localhost.key"}")
+        raise e
+
+    server = await loop.create_server(
+        Server,
+        'localhost', 8443
+        , ssl=context
+        )
+
+    async with server:
+        await server.serve_forever()
+
+
+class ServerOld:
     def __init__(self, hostname: str, port: int, keydir: Path):
         self.addr = (hostname, port)
         self.keydir = keydir

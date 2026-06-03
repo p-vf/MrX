@@ -28,5 +28,8 @@ def get_or_generate_cert(keydir: Path, force_regen: bool =False):
             if r != 0:
                 raise Exception("subprocess failed")
             os.remove(tf.name)
-    with open(keydir/"localhost.crt", "r") as f:
+    return get_cert(keydir / "localhost.crt")
+
+def get_cert(cert_path: Path):
+    with open(cert_path, "r") as f:
         return f.read()
