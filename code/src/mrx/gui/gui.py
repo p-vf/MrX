@@ -4,11 +4,10 @@ import os
 import folium
 import time
 import queue
-from typing import Any
-import threading
 
 from gui.types import BaseClient
 from gui.enums import LocationKind, ChangeKind, from_number, Change
+from logic.geometry import to_json_serializable, Rect
 
 
 BACKGROUND = "#1e1e1e"
@@ -99,10 +98,13 @@ class Gui:
     def update_location(self, location: LocationKind):
         self.window.evaluate_js(f"update_location({location.value})")
 
-    def update_map(self, user, others):
-        self.window.evaluate_js(f"update_map({user}, {others})")
+    def update_map(self, user: Rect, others: dict[str, Rect]):
+        self.window.state.user_rect = to_json_serializable(user)
+        self.window.state.other_user_rects = [[o, to_json_serializable(others[o])] for o in others]
+        self.window.evaluate_js("update_map()")
 
     def update_accuracy(self, accuracy):
+        # TODO prevent possible js-injection here..
         self.window.evaluate_js(f"update_accuracy({accuracy})")
 
     def generate_map(self, location, zoom):
@@ -130,55 +132,37 @@ class Gui:
             }
 
             async function update_map(user, others) {
-                console.log(user);
-                console.log(others);
+                console.log(user)
+                console.log(others)
 
-                const user_id = user[0];
+                const user_id = "you";
                 const others_id = others.map(o => o[0]);
 
-                let new_user_c = L.circle(
-                    user[1], {
-                    radius : user[2],
-                    color : "green",
-                    fill : true
-                })
+
+                var bounds = [[user.x_min, user.y_min], [user.x_max, user.y_max]];
+
 
                 if (!window.markers.has(user_id)) {
-                    new_user_c.addTo(window.marker_lyr);
-                    window.markers.set(user_id, new_user_c);
+                    let new_user_a = L.rectangle(bounds, {color: "green", weight: 1});
+                    new_user_a.addTo(window.marker_lyr);
+                    window.markers.set(user_id, new_user_a);
                 } else {
                     let old_user_c = window.markers.get(user_id);
-                    if (
-                        old_user_c.getLatLng() != new_user_c.getLatLng() ||
-                        old_user_c.getRadius() != new_user_c.getRadius()
-                        ) {
-                        new_user_c.addTo(window.marker_lyr);
-                        window.marker_lyr.removeLayer(window.markers.get(user_id))
-                        window.markers.set(user_id, new_user_c);
-                    }
+                    old_user_c.setBounds(bounds)
                 }
 
-                for (let i = 0; i < others.length; i++) {
-                    let new_other_c = L.circle(
-                        others[i][1], {
-                        radius : others[i][2],
-                        color : "blue",
-                        fill : true
-                    })
 
-                    if (!window.markers.has(others_id[i])) {
-                        new_other_c.addTo(window.marker_lyr);
-                        window.markers.set(others_id[i], new_other_c);
+                for (let i = 0; i < others.length; i++) {
+                    rect = others[i][1]
+                    other_id = others[i][0]
+                    var bounds = [[rect.x_min, rect.y_min], [rect.x_max, rect.y_max]];
+                    if (!window.markers.has(other_id)) {
+                        let new_user_a = L.rectangle(bounds, {color: "blue", weight: 1});
+                        new_user_a.addTo(window.marker_lyr);
+                        window.markers.set(other_id, new_user_a);
                     } else {
-                        let old_other_c = window.markers.get(others_id[i]);
-                        if (
-                            old_other_c.getLatLng() != new_other_c.getLatLng() ||
-                            old_other_c.getRadius() != new_other_c.getRadius()
-                            ) {
-                            new_other_c.addTo(window.marker_lyr);
-                            window.marker_lyr.removeLayer(window.markers.get(others_id[i]))
-                            window.markers.set(others_id[i], new_other_c);
-                        }
+                        let old_user_c = window.markers.get(user_id);
+                        old_user_c.setBounds(bounds)
                     }
                 }
 

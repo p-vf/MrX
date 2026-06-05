@@ -2,6 +2,13 @@ from abc import abstractmethod
 from pathlib import Path
 from gui.enums import LocationKind
 import threading
+from logic.geometry import Rect
+
+class UserData:
+    def __init__(self, name: str, area: Rect, accuracy: float):
+        self.name = name
+        self.area = area
+        self.accuracy = accuracy
 
 class BaseModel:
     @abstractmethod
@@ -29,7 +36,7 @@ class BaseModel:
         pass
 
     @abstractmethod
-    def update_user(self, username=None, position=None, accuracy=None):
+    def update_user_rect(self, username: str, area: Rect):
         pass
 
     @abstractmethod

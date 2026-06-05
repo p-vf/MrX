@@ -4,14 +4,16 @@ import ssl
 import socket
 import os
 import selectors
-from .common import StateHandler, Connection
 import asyncio
+import json
+
 from communication.protocol import ClientMessageType, ServerMessageType, parse_client_msg, encode_msg
 from database.create_user_db import create_user_db
 from database.user_db import UserDBManager
+from server.spacial_store import SpacialStore
+from logic.geometry import serialize_rect, Rect
 
-from .keygen import generate_key, get_or_generate_cert
-from ..logic.quadtree import QuadTreeNode, Rectangle
+from communication.keygen import generate_key, get_or_generate_cert
 
 
 def main() -> None:
@@ -24,12 +26,17 @@ def main() -> None:
     # s = ServerOld("localhost", 8443, Path("keys"))
     # s.start()
 
+# example region: rect that bounds Switzerland
+# TODO store these locations
+spacialstore = SpacialStore(Rect(45.6283, 5.8722, 47.6283, 10.8722))
+spacialstore.insert("chad", [2, 3, 3, 0, 0, 0])
+spacialstore.insert("chud", [2, 3, 1, 0, 0, 0])
 
 class Server(asyncio.Protocol):
     def __init__(self, db_manager: UserDBManager):
-        self.loop = asyncio.get_running_loop()
         self.peername = None
         self.db_manager = db_manager
+        self.spacial_db = spacialstore
 
     # ==== START methods from asyncio.Protocol ====
     def connection_made(self, transport):
@@ -54,35 +61,42 @@ class Server(asyncio.Protocol):
             return
         match msg_type:
             case ClientMessageType.LOGIN:
-                print(f"login attempt: {msg}")
-                login_successful = self.db_manager.is_valid_login(msg[0], msg[1])
+                username, password = msg
+                login_successful = self.db_manager.is_valid_login(username, password)
                 if login_successful:
-                    self.send(encode_msg(ServerMessageType.LOGIN_SUCCESSFUL, []))
-                else:
-                    if self.db_manager.get_user(msg[0]) is None:
-                        self.send(encode_msg(ServerMessageType.LOGIN_FAILED, ["user not in database"]))
-                    else:
-                        self.send(encode_msg(ServerMessageType.LOGIN_FAILED, ["wrong password"]))
+                    # TODO the username should not have to be sent, the client
+                    # should already know this information in principle
+                    self.send(encode_msg(ServerMessageType.LOGIN_SUCCESSFUL, [username]))
+                    self.send_user_areas()
+                    return
+                if self.db_manager.get_user(username) is None:
+                    self.send(encode_msg(ServerMessageType.LOGIN_FAILED, ["user not in database"]))
+                    return
+                self.send(encode_msg(ServerMessageType.LOGIN_FAILED, ["wrong password"]))
                 # TODO change the state of this connection (user is now logged in)
             case ClientMessageType.SIGNUP:
-                print(f"signup attempt: {msg}")
-                username = msg[0]
-                pwd = msg[1]
+                username, password = msg
                 assert isinstance(username, str)
-                assert isinstance(pwd, str)
+                assert isinstance(password, str)
                 if self.db_manager.get_user(username) is not None:
                     print(f"user {msg[0]} already in database")
                     self.send(encode_msg(ServerMessageType.SIGNUP_FAILED, ["username already taken"]))
                     return
-                err = self.db_manager.insert_user(username, 0, pwd)
+                err = self.db_manager.insert_user(username, 0, password)
                 if err:
                     self.send(encode_msg(ServerMessageType.SIGNUP_FAILED, ["db error"]))
                     print(f"db error: {err}")
                     return
                 self.send(encode_msg(ServerMessageType.SIGNUP_SUCCESSFUL, []))
+                self.send_user_areas()
                 # TODO change the state of this connection (user is now logged in or smthn)
             case x:
                 print(f"Message type {x} not handled yet")
+
+    def send_user_areas(self):
+        users = self.spacial_db.get_all_users()
+        for user in users:
+            self.send(encode_msg(ServerMessageType.UPDATE_USERAREA, [user, serialize_rect(users[user])]))
 
     def eof_received(self):
         print("other party closed connection")
@@ -120,68 +134,3 @@ async def start_server():
     async with server:
         await server.serve_forever()
 
-
-class ServerOld:
-    def __init__(self, hostname: str, port: int, keydir: Path):
-        self.addr = (hostname, port)
-        self.keydir = keydir
-        self.sel = selectors.DefaultSelector()
-
-        world = Rectangle(0, 0, 100, 100)
-        self.quadtree = QuadTreeNode(world)
-        pass
-
-    def start(self):
-        cert = get_or_generate_cert(self.keydir)
-        print(cert)
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        try:
-            context.load_cert_chain(self.keydir/"localhost.crt", self.keydir/"localhost.key")
-        except FileNotFoundError as e:
-            print(f"files: {self.keydir/"localhost.crt"}, {self.keydir/"localhost.key"}")
-            raise e
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
-            sock.bind(self.addr)
-            sock.listen(5)
-            sock.setblocking(False)
-            with context.wrap_socket(sock, server_side=True) as ssock:
-                self.sel.register(ssock, selectors.EVENT_READ, self.accept)
-                while True:
-                    events = self.sel.select(0.1)
-                    for key, mask in events:
-                        callback = key.data
-                        callback(key.fileobj, mask)
-
-    def accept(self, sock, mask):
-        conn, addr = sock.accept()
-        print("new connection with address:", addr)
-        conn.setblocking(False)
-        handler = EchoStateHandler()
-        # handler = LocationStateHandler(self.quadtree)
-        connection = Connection(handler, self.sel)
-        self.sel.register(conn, selectors.EVENT_READ, connection.read)
-
-    # def read(self, conn: ssl.SSLSocket, mask):
-    #     assert isinstance(conn, ssl.SSLSocket)
-    #     data = conn.recv(1000)
-    #     if data:
-    #         print("echoing", repr(data), "to", conn)
-    #         conn.send(data)
-    #     else:
-    #         print("closing", conn)
-    #         self.sel.unregister(conn)
-    #         conn.close()
-
-
-# simple echo behaviour
-class EchoStateHandler(StateHandler):
-    def __init__(self):
-        self.log: list[bytes] = []
-
-    def handle(self, data: bytes, reply_callback: Callable[[bytes], None]):
-        print("received", data)
-        self.log.append(data)
-        reply_callback(data)
-
-    def end(self):
-        print("log of messages received:", self.log)

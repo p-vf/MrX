@@ -8,11 +8,18 @@ class ServerMessageType(enum.Enum):
     LOGIN_FAILED = 1
     SIGNUP_SUCCESSFUL = 2
     SIGNUP_FAILED = 3
+    UPDATE_USERAREA = 4
 
 @enum.unique
 class ClientMessageType(enum.Enum):
     LOGIN = 0
     SIGNUP = 1
+
+# TODO (p-vf) this could be made a bit more smart: instead of just encoding and
+# decoding the data as list[str], we could encode and decode the data according
+# to the message type. I.e. if we expect a UPDATE_USERAREA to have an area as data
+# we could encode and then decode this data as such. This would also be useful
+# for checking the type of the data.
 
 def encode_msg(message_type: ServerMessageType | ClientMessageType, data: list[str]) -> bytes:
     # TODO instead of sending the enum name, we could send the number that identifies this enum

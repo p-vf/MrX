@@ -1,13 +1,13 @@
 import ssl
 import socket
 from pathlib import Path
-from .common import Connection, StateHandler
 import selectors
 from gui.types import BaseClient, BaseModel
 from gui.model import Model
 from typing import override
 import threading
 from communication.protocol import ServerMessageType, ClientMessageType, parse_server_msg, encode_msg
+from logic.geometry import deserialize_rect
 from gui.enums import LocationKind
 import os
 
@@ -112,7 +112,8 @@ class Client(BaseClient):
 
     @override
     def handle_init_map(self):
-        print("TODO implement handle_init_map")
+        assert self.protocol is not None
+        self.protocol.model.update_map()
     # ==== END methods from BaseClient ====
 
     def start_gui(self):
@@ -147,7 +148,9 @@ class ClientProtocol:
             return
         match msg_type:
             case ServerMessageType.LOGIN_SUCCESSFUL:
+                username, = msg
                 print(f"successfully logged in!")
+                self.model.set_user(username)
                 self.model.update_location(LocationKind.MAIN)
             case ServerMessageType.LOGIN_FAILED:
                 print(f"login failed.. reason: {msg}")
@@ -156,6 +159,8 @@ class ClientProtocol:
                 self.model.update_location(LocationKind.MAIN)
             case ServerMessageType.SIGNUP_FAILED:
                 print(f"login failed.. reason: {msg}")
+            case ServerMessageType.UPDATE_USERAREA:
+                self.model.update_user_rect(msg[0], deserialize_rect(msg[1]))
             case x:
                 print(f"TODO Message type {x} not handled yet")
 
@@ -169,29 +174,6 @@ class ClientProtocol:
         sent = self.transport.send(msg)
         if sent == 0:
             raise RuntimeError("socket connection broken")
-
-class ClientStateHandler(StateHandler):
-    def __init__(self):
-        pass
-
-    def start(self, sock: ssl.SSLSocket, conn: Connection):
-        data = input("> ").encode()
-        conn.write(sock, data)
-
-    def handle(self, data, reply_callback):
-        print("<", data)
-        reply = input("> ").encode()
-        reply_callback(reply)
-
-        # Implementation of the answer of the client could be structured like that
-        # msg = {
-        #     "vertical": vertical,
-        #     "horizontal": horizontal,
-        #     "continue": True
-        # }
-
-    def end(self):
-        print("server closed connection")
 
 def main():
     c = Client()

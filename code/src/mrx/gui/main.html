@@ -56,9 +56,9 @@
         await window.pywebview.api.update_client_accuracy(acc);
     }
 
-    function update_map(user, others) {
+    function update_map() {
         const iframe = document.getElementById("map-frm");
-        iframe.contentWindow.update_map(user, others)
+        iframe.contentWindow.update_map(pywebview.state.user_rect, pywebview.state.other_user_rects)
     }
 
     function update_location(location) {
