@@ -8,7 +8,7 @@ from typing import override
 import threading
 from communication.protocol import ServerMessageType, ClientMessageType, parse_server_msg, encode_msg
 from logic.geometry import deserialize_rect
-from gui.enums import LocationKind
+from gui.enums import LocationKind, AnswerKind
 import os
 
 class Client(BaseClient):
@@ -107,13 +107,25 @@ class Client(BaseClient):
         self.protocol.send(encode_msg(ClientMessageType.SIGNUP, [username, password]))
 
     @override
-    def handle_accuracy(self, accuracy):
+    def handle_accuracy(self, friend, depth_level):
         print("TODO implement handle_accuracy")
 
     @override
     def handle_init_map(self):
         assert self.protocol is not None
         self.protocol.model.update_map()
+    
+    @override
+    def handle_add_friend(self, friend):
+        print("TODO implement handle_add_friend")
+
+    @override
+    def handle_remove_friend(self, friend):
+        print("TODO implement handle_remove_friend")
+    
+    @override
+    def handle_accept_request(self, friend, answer):
+        print("TODO implement handle_accept_friend")
     # ==== END methods from BaseClient ====
 
     def start_gui(self):

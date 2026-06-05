@@ -1,6 +1,7 @@
 from .gui import Gui
-from gui.types import BaseModel, UserData
+from gui.types import BaseModel
 from logic.geometry import Rect
+from gui.enums import UpdateKind, AnswerKind, Change
 
 class Model(BaseModel):
     def __init__(self, client):
@@ -9,6 +10,7 @@ class Model(BaseModel):
         self.userarea: Rect | None = None
         self.useraccuracy: float | None = None
         self.others: dict[str, Rect] = {}
+        self.accuracy_bounds: tuple[int, int] = None
 
         self.gui = Gui(client)
         self.updates = self.gui.get_update_queue()
@@ -27,7 +29,7 @@ class Model(BaseModel):
     
     def update_location(self, location):
         self.location = location
-        self.updates.put((0, location))
+        self.updates.put(Change(UpdateKind.UPDATE_LOCATION, (location,)))
     
     def update_user_rect(self, username, area):
         assert self.username is not None
@@ -35,13 +37,30 @@ class Model(BaseModel):
             self.userarea = area
         else:
             self.others[username] = area
-        self.updates.put((1, self.userarea, self.others))
+        self.updates.put(Change(UpdateKind.UPDATE_MAP, (self.userarea, self.others)))
     
     def insert_others(self, username, area):
         self.others[username] = area
     
     def delete_others(self, username):
         del self.others[username]
+
+    def add_friend(self, friend):
+        self.updates.put(Change(UpdateKind.ADD_FRIEND, (friend,)))
+
+    def remove_friend(self, friend):
+        self.delete_others(friend)
+        self.updates.put(Change(UpdateKind.REMOVE_FRIEND, (friend,)))
+    
+    def request_response(self, friend, answer):
+        if (answer == AnswerKind.ACCPET):
+            self.insert_others(friend, None)
+        
+        self.updates.put(Change(UpdateKind.REQUEST_RESPONSE, (friend, answer)))    
+
+    def update_spacial(self, min_area, max_area):
+        self.accuracy_bounds = (min_area, max_area)
+        self.updates.put(Change(UpdateKind.UPDATE_SPACIAL, (self.accuracy_bounds[0], self.accuracy_bounds[1],)))
     
     def update_others(self, old_un, new_un=None, position=None, accuracy=None):
         # NOTE (p-vf) I think we don't have to handle changing usernames as this
@@ -63,4 +82,4 @@ class Model(BaseModel):
         self.others[curr_un] = (curr_pos, curr_acc)
     
     def update_map(self):
-        self.updates.put((1, self.userarea, self.others))
+        self.updates.put(Change(UpdateKind.UPDATE_MAP, (self.userarea, self.others)))

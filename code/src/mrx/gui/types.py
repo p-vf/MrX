@@ -58,6 +58,22 @@ class BaseModel:
     @abstractmethod
     def start_gui(self):
         pass
+    
+    @abstractmethod
+    def add_friend(self, friend):
+        pass
+
+    @abstractmethod
+    def remove_friend(self, friend):
+        pass
+
+    @abstractmethod
+    def request_response(self, friend, answer):
+        pass
+
+    @abstractmethod
+    def update_spacial(self, min_area, max_area):
+        pass
 
 # interfaces for mocking and stuff
 class BaseClient:
@@ -82,9 +98,22 @@ class BaseClient:
         pass
 
     @abstractmethod
-    def handle_accuracy(self, accuracy):
+    def handle_accuracy(self, friend, depth_level):
         pass
 
     @abstractmethod
     def handle_init_map(self):
         pass
+
+    @abstractmethod
+    def handle_add_friend(self, friend):
+        pass
+    
+    @abstractmethod
+    def handle_remove_friend(self, friend):
+        pass
+
+    @abstractmethod
+    def handle_accept_request(self, friend, answer):
+        pass
+

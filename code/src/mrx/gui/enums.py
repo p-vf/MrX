@@ -7,7 +7,25 @@ class ChangeKind(Enum):
     SIGNUP_TRIGGER = 2
     ACCURACY_UPDATE = 3
     MAP_INIT = 4
-    CLOSE_WINDOW = 5
+    ADD_FRIEND = 5
+    REMOVE_FRIEND = 6
+    ACCEPT_REQUEST = 7
+    CLOSE_WINDOW = 8
+
+@unique
+class UpdateKind(Enum):
+    OFFLINE = -1
+    UPDATE_LOCATION = 0
+    UPDATE_MAP = 1
+    ADD_FRIEND = 2
+    REMOVE_FRIEND = 3
+    REQUEST_RESPONSE = 4
+    UPDATE_SPACIAL = 5
+
+@unique
+class AnswerKind(Enum):
+    ACCEPT = 0
+    DENY = 1
 
 class Change:
     def __init__(self, kind: ChangeKind, attrs: tuple):

@@ -68,15 +68,15 @@
 
 ## GUI → Client
 
-- `add friend [<name>]`
-- `remove friend [<name>]`
-- `accept friend [<name>, <ans>]`
-- `set accuracy [<name>, <depth_lvl>]`
+- `add friend [<name>]` I want to add friend: `<name>`
+- `remove friend [<name>]` I want to remove friend: `<name>`
+- `accept request [<name>, <ans>]` I want to accept friend request from friend: `<name>`
+- `set accuracy [<name>, <depth_lvl>]` I want to set the accuracy for friend: `<name>` to level: `<depth_lvl>`
 
 ## Client → GUI
 
-- `add friend [<name_from>]`
-- `remove friend [<name_from>]`
-- `accept friend [<name_from>, <ans>]`
-- `update user area [<name>, <path>]`
-- `special info [<min area>, <max area>]`
+- `add friend [<name_from>]` I got a friend request from: `<name>`
+- `remove friend [<name_from>]` Remove friend with name: `<name>`
+- `request response [<name_from>, <ans>]` I got an answer from my friend request from friend: `<name>` with answer: `<ans>`
+- `update user area [<name>, <path>]` ???
+- `spacial info [<min area>, <max area>]` update the info for the accuracy sliders

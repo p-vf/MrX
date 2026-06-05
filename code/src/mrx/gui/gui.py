@@ -6,7 +6,7 @@ import time
 import queue
 
 from gui.types import BaseClient
-from gui.enums import LocationKind, ChangeKind, from_number, Change
+from gui.enums import LocationKind, ChangeKind, UpdateKind, from_number, Change
 from logic.geometry import to_json_serializable, Rect
 
 
@@ -67,11 +67,20 @@ class Gui:
                     assert len(change.attrs) == 2
                     self.client.handle_signup(*change.attrs)
                 case ChangeKind.ACCURACY_UPDATE:
-                    assert len(change.attrs) == 1
+                    assert len(change.attrs) == 2
                     self.client.handle_accuracy(*change.attrs)
                 case ChangeKind.MAP_INIT:
                     assert len(change.attrs) == 0
                     self.client.handle_init_map()
+                case ChangeKind.ADD_FRIEND:
+                    assert len(change.attrs) == 1
+                    self.client.handle_add_friend(*change.attrs)
+                case ChangeKind.REMOVE_FRIEND:
+                    assert len(change.attrs) == 1
+                    self.client.handle_remove_friend(*change.attrs)
+                case ChangeKind.ACCEPT_REQUEST:
+                    assert len(change.attrs) == 2
+                    self.client.handle_accept_request(*change.attrs)
                 case x:
                     assert False, f"unreachable: {x} not handled"
         except queue.Empty:
@@ -80,16 +89,27 @@ class Gui:
     def check_updates(self):
         try:
             update = self.updates.get(block=False)
-
-            match update[0]:
-                case -1:
+            match update.kind:
+                case UpdateKind.OFFLINE:
                     self.online = False
-                case 0:
-                    self.update_location(update[1])
-                case 1:
-                    self.update_map(update[1], update[2])
-                case 2:
-                    self.update_accuracy(update[1])
+                case UpdateKind.UPDATE_LOCATION:
+                    assert len(update.attrs) == 1
+                    self.update_location(*update.attrs)
+                case UpdateKind.UPDATE_MAP:
+                    assert len(update.attrs) == 2
+                    self.update_map(*update.attrs)
+                case UpdateKind.ADD_FRIEND:
+                    assert len(update.attrs) == 1
+                    self.add_friend(*update.attrs)
+                case UpdateKind.REMOVE_FRIEND:
+                    assert len(update.attrs) == 1
+                    self.remove_friend(*update.attrs)
+                case UpdateKind.REQUEST_RESPONSE:
+                    assert len(update.attrs) == 2
+                    self.request_response(*update.attrs)
+                case UpdateKind.UPDATE_SPACIAL:
+                    assert len(update.attrs) == 2
+                    self.update_spacial(*update.attrs)
                 case x:
                     assert False, f"unreachable: {x} not handled"
         except queue.Empty:
@@ -106,6 +126,18 @@ class Gui:
     def update_accuracy(self, accuracy):
         # TODO prevent possible js-injection here..
         self.window.evaluate_js(f"update_accuracy({accuracy})")
+
+    def add_friend(self, friend):
+        pass
+
+    def remove_friend(self, friend):
+        pass
+
+    def request_response(self, friend, answer):
+        pass
+
+    def update_spacial(self, min_area, max_area):
+        pass
 
     def generate_map(self, location, zoom):
         map = folium.Map(
@@ -204,11 +236,20 @@ class Api:
     def update_client_signup(self, username, password):
         self.changes.put(Change(ChangeKind.SIGNUP_TRIGGER, (username, password)))
 
-    def update_client_accuracy(self, accuracy):
-        self.changes.put(Change(ChangeKind.ACCURACY_UPDATE, (accuracy,)))
+    def update_client_accuracy(self, friend, depth_level):
+        self.changes.put(Change(ChangeKind.ACCURACY_UPDATE, (friend, depth_level,)))
 
     def update_client_init_map(self):
         self.changes.put(Change(ChangeKind.MAP_INIT, ()))
+    
+    def update_client_add_friend(self, friend):
+        self.changes.put(Change(ChangeKind.ADD_FRIEND, (friend,)))
+    
+    def update_client_remove_friend(self, friend):
+        self.changes.put(Change(ChangeKind.REMOVE_FRIEND, (friend,)))
+
+    def update_client_accept_request(self, friend, answer):
+        self.changes.put(Change(ChangeKind.ACCEPT_REQUEST, (friend, answer,)))
 
     def close_client(self):
         self.changes.put(Change(ChangeKind.CLOSE_WINDOW, ()))

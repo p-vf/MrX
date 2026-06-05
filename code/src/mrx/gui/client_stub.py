@@ -1,5 +1,6 @@
 from communication.keygen import get_cert
 from typing import override
+from gui.enums import AnswerKind
 
 from .model import Model
 from gui.types import BaseClient
@@ -35,16 +36,30 @@ class ClientStub(BaseClient):
         self.model.update_location(2)
 
     @override
-    def handle_accuracy(self, accuracy):
+    def handle_accuracy(self, friend, depth_level):
         print("handling accuracy")
-        self.model.update_user(accuracy=accuracy)
+        #self.model.update_user(accuracy=accuracy)
         self.model.update_map()
 
     @override
     def handle_init_map(self):
         print("handling initialization of map")
         self.model.update_map()
+    
+    @override
+    def handle_add_friend(self, friend):
+        print(f"handling adding friend: {friend}")
 
+    @override
+    def handle_remove_friend(self, friend):
+        print(f"handling removing friend: {friend}")
+        self.model.delete_others(friend)
+    
+    @override
+    def handle_accept_request(self, friend, answer):
+        print(f"handling accepting request: {friend}, {answer}")
+        if(answer == AnswerKind.ACCEPT):
+            self.model.insert_others(friend, None)
 
 def main():
     c = Client()
