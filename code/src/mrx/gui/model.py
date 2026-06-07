@@ -8,9 +8,9 @@ class Model(BaseModel):
         self.location = 0
         self.username: str | None = None
         self.userarea: Rect | None = None
-        self.useraccuracy: float | None = None
+        self.userpath: list[int] | None = None
         self.others: dict[str, Rect] = {}
-        self.accuracy_bounds: tuple[int, int] = None
+        self.area_steps: list[int] | None = None
 
         self.gui = Gui(client)
         self.updates = self.gui.get_update_queue()
@@ -23,6 +23,9 @@ class Model(BaseModel):
     
     def set_user(self, username: str):
         self.username = username
+    
+    def set_user_path(self, path):
+        self.userpath = path
     
     def set_others(self, others):
         self.others = others
@@ -58,20 +61,13 @@ class Model(BaseModel):
         
         self.updates.put(Change(UpdateKind.REQUEST_RESPONSE, (friend, answer)))    
 
-    def update_spacial(self, min_area, max_area):
-        self.accuracy_bounds = (min_area, max_area)
-        self.updates.put(Change(UpdateKind.UPDATE_SPACIAL, (self.accuracy_bounds[0], self.accuracy_bounds[1],)))
+    def update_spacial(self, area_steps):
+        # depth ist eine liste mit den areas per depth level
+        self.accuracy_steps = (area_steps)
+        self.updates.put(Change(UpdateKind.UPDATE_SPACIAL, (area_steps,)))
     
-    def update_others(self, old_un, new_un=None, position=None, accuracy=None):
-        # NOTE (p-vf) I think we don't have to handle changing usernames as this
-        # might lead to unnecessary complexity. As far as I know, there are no
-        # security benefits to this feature but idk.
-        curr_pos, curr_acc = self.others[old_un]
-        curr_un = old_un
-
-        if new_un:
-            curr_un = new_un
-            del self.others[old_un]
+    def update_others(self, username, position=None, accuracy=None):
+        curr_pos, curr_acc = self.others[username]
 
         if position:
             curr_pos = position
@@ -79,7 +75,7 @@ class Model(BaseModel):
         if accuracy:
             curr_acc = accuracy
         
-        self.others[curr_un] = (curr_pos, curr_acc)
+        self.others[username] = (curr_pos, curr_acc)
     
     def update_map(self):
         self.updates.put(Change(UpdateKind.UPDATE_MAP, (self.userarea, self.others)))

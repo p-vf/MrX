@@ -9,6 +9,13 @@
 
 ---
 
+# TODO
+
+Add set own accuracy / depth level and store in state
+area per depth level for update spacial
+
+---
+
 # 🖥️ GUI
 
 ## Features

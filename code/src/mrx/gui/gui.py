@@ -108,7 +108,7 @@ class Gui:
                     assert len(update.attrs) == 2
                     self.request_response(*update.attrs)
                 case UpdateKind.UPDATE_SPACIAL:
-                    assert len(update.attrs) == 2
+                    assert len(update.attrs) == 1
                     self.update_spacial(*update.attrs)
                 case x:
                     assert False, f"unreachable: {x} not handled"
@@ -136,7 +136,7 @@ class Gui:
     def request_response(self, friend, answer):
         pass
 
-    def update_spacial(self, min_area, max_area):
+    def update_spacial(self, area_steps):
         pass
 
     def generate_map(self, location, zoom):
