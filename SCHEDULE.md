@@ -80,10 +80,10 @@ area per depth level for update spacial
 - `accept request [<name>, <ans>]` I want to accept friend request from friend: `<name>`
 - `set accuracy [<name>, <depth_lvl>]` I want to set the accuracy for friend: `<name>` to level: `<depth_lvl>`
 
-## Client → GUI
+## Model → GUI
 
-- `add friend [<name_from>]` I got a friend request from: `<name>`
-- `remove friend [<name_from>]` Remove friend with name: `<name>`
+- `add friend [<name>]` Add friend with name: `<name>`
+- `remove friend [<name>]` Remove friend with name: `<name>`
+- `request received [<name_from>]` I got a friend request from friend: `<name_from>`
 - `request response [<name_from>, <ans>]` I got an answer from my friend request from friend: `<name>` with answer: `<ans>`
-- `update user area [<name>, <path>]` ???
 - `spacial info [<min area>, <max area>]` update the info for the accuracy sliders

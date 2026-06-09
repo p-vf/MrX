@@ -16,12 +16,18 @@ button {
   background: #333;
   color: #e0e0e0;
   border: 1px solid #444;
-  padding: 8px 12px;
+  padding: 5px;
   cursor: pointer;
 }
 
 button:hover {
   background: #444;
+}
+
+dialog {
+  background: #121212;
+  color: #e0e0e0;
+  border: 1px solid #444;
 }
 
 /* labels */
@@ -35,4 +41,74 @@ input, textarea, select {
   color: #e0e0e0;
   border: 1px solid #444;
   padding: 6px;
+}
+
+.friendlist {
+  width: 200px;
+  height: 700px;
+  background: #121212;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  margin:20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+}
+
+.row_container {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
+.friend_container {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.friend {
+  height: 50px;
+  width: 100%;
+  margin: 0px 5px 0px 0px;
+  background: #333;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.depth_slider {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0px 5px 0px 5px;
+}
+
+.img_btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.just_txt {
+  margin: 0;
+  padding: 0;
+}
+
+.opt_window {
+  background: #121212;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  padding: 5px;
+}
+
+.opt_window > *{
+  margin: 5px;
 }

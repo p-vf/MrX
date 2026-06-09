@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_e2720d0a24879112362dacf41a1b3b03 {
+                #map_9b4e0f96a39dfe6f389e95634677c1e7 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -71,65 +71,54 @@
             }
 
             async function update_map(user, others) {
-                console.log(user);
-                console.log(others);
+                console.log(user)
+                console.log(others)
 
-                const user_id = user[0];
+                const user_id = "you";
                 const others_id = others.map(o => o[0]);
 
-                let new_user_c = L.circle(
-                    user[1], {
-                    radius : user[2],
-                    color : "green",
-                    fill : true
-                })
 
+                var bounds = [[user.x_min, user.y_min], [user.x_max, user.y_max]];
+
+                console.log(`adding rect for friend: ${user_id}`);
                 if (!window.markers.has(user_id)) {
-                    new_user_c.addTo(window.marker_lyr);
-                    window.markers.set(user_id, new_user_c);
+                    let new_user_a = L.rectangle(bounds, {color: "green", weight: 1});
+                    new_user_a.addTo(window.marker_lyr);
+                    window.markers.set(user_id, new_user_a);
                 } else {
                     let old_user_c = window.markers.get(user_id);
-                    if (
-                        old_user_c.getLatLng() != new_user_c.getLatLng() ||
-                        old_user_c.getRadius() != new_user_c.getRadius()
-                        ) {
-                        new_user_c.addTo(window.marker_lyr);
-                        window.marker_lyr.removeLayer(window.markers.get(user_id))
-                        window.markers.set(user_id, new_user_c);
-                    }
+                    old_user_c.setBounds(bounds)
                 }
+
+                console.log("added user marker");
+
 
                 for (let i = 0; i < others.length; i++) {
-                    let new_other_c = L.circle(
-                        others[i][1], {
-                        radius : others[i][2],
-                        color : "blue",
-                        fill : true
-                    })
-
-                    if (!window.markers.has(others_id[i])) {
-                        new_other_c.addTo(window.marker_lyr);
-                        window.markers.set(others_id[i], new_other_c);
+                    rect = others[i][1]
+                    other_id = others[i][0]
+                    var bounds = [[rect.x_min, rect.y_min], [rect.x_max, rect.y_max]];
+                    console.log(`adding rect for friend: ${other_id}`);
+                    if (!window.markers.has(other_id)) {
+                        let new_user_a = L.rectangle(bounds, {color: "blue", weight: 1});
+                        new_user_a.addTo(window.marker_lyr);
+                        window.markers.set(other_id, new_user_a);
                     } else {
-                        let old_other_c = window.markers.get(others_id[i]);
-                        if (
-                            old_other_c.getLatLng() != new_other_c.getLatLng() ||
-                            old_other_c.getRadius() != new_other_c.getRadius()
-                            ) {
-                            new_other_c.addTo(window.marker_lyr);
-                            window.marker_lyr.removeLayer(window.markers.get(others_id[i]))
-                            window.markers.set(others_id[i], new_other_c);
-                        }
+                        let old_user_c = window.markers.get(user_id);
+                        old_user_c.setBounds(bounds)
                     }
                 }
-                
+
+                console.log("added others markers");
+
                 const keep = new Set([
                     user_id,
                     ...others_id
                 ]);
 
                 for (const id of window.markers.keys()) {
+                    console.log(`checking rect for friend: ${id}`);
                     if (!keep.has(id)) {
+                        console.log(`removing rect for friend: ${id}`);
                         window.marker_lyr.removeLayer(window.markers.get(id));
                         window.markers.delete(id);
                     } else {
@@ -139,23 +128,25 @@
                         }).openTooltip();
                     }
                 }
+
+                console.log("removed old markers");
             }
         </script>
         
     
-            <div class="folium-map" id="map_e2720d0a24879112362dacf41a1b3b03" ></div>
+            <div class="folium-map" id="map_9b4e0f96a39dfe6f389e95634677c1e7" ></div>
         
 </body>
 <script>
     
     
-            var map_e2720d0a24879112362dacf41a1b3b03 = L.map(
-                "map_e2720d0a24879112362dacf41a1b3b03",
+            var map_9b4e0f96a39dfe6f389e95634677c1e7 = L.map(
+                "map_9b4e0f96a39dfe6f389e95634677c1e7",
                 {
                     center: [47.3745, 8.5445],
                     crs: L.CRS.EPSG3857,
                     ...{
-  "zoom": 12,
+  "zoom": 5,
   "zoomControl": true,
   "preferCanvas": false,
 }
@@ -167,7 +158,7 @@
 
         
     
-            var tile_layer_a7342e95f8ab06c6f0802bbd555b9f2f = L.tileLayer(
+            var tile_layer_802838896cff24d8a645d42c3c02b222 = L.tileLayer(
                 "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
                 {
   "minZoom": 0,
@@ -184,7 +175,7 @@
             );
         
     
-            tile_layer_a7342e95f8ab06c6f0802bbd555b9f2f.addTo(map_e2720d0a24879112362dacf41a1b3b03);
+            tile_layer_802838896cff24d8a645d42c3c02b222.addTo(map_9b4e0f96a39dfe6f389e95634677c1e7);
         
 </script>
 </html>

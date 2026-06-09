@@ -11,9 +11,22 @@
 
 <body>
     <div id="main">
-        <div style="position: relative; display: flex; align-items: center; padding: 50px;">
+        <div style="position: relative; display: flex; align-items: center; justify-content: center; padding: 20px;">
+
+            <div style="position: absolute; left: 50px; display: flex; justify-content: center; align-items: center">
+                <button class="img_btn" onclick="open_requests()" style="margin-right: 10px;">
+                    <img src="img/mail-32.png" alt="friend requests">
+                </button>
+                <dialog id="requests" class="opt_window">
+
+                </dialog>
+                <button id="add-btn" onclick="add_friend()" style="margin-right: 10px; margin-left: 10px">
+                    Add friend
+                </button>
+                <input id="add-input" type="text" id="acc-input" placeholder="Username..." style="margin-right: 10px; margin-left: 10px">
+            </div>
                 
-            <h1 id="acc-hdr" style="margin: 0 auto;">Current accuracy: 300m</h1>
+            <h1 id="acc-hdr">Current accuracy: 300m</h1>
 
             <button onclick="logout()" style="position: absolute; right: 50px;">
                 Log out
@@ -22,13 +35,15 @@
         </div>
 
         <div style="display: flex; justify-content: center; align-items: center; padding-top: 10px; padding-bottom: 20px">
-            <button id="acc-btn" onclick="set_accuracy()" style="margin-right: 10px; margin-left: 10px">
+            <button id="acc-btn" onclick="change_accuracy()" style="margin-right: 10px; margin-left: 10px">
                     Set Accuracy
             </button>
             <input type="text" id="acc-input" placeholder="Accuracy..." style="margin-right: 10px; margin-left: 10px">
         </div>
+
         <div style="display: flex; justify-content: center; align-items: center; padding: 20px;">
-            <iframe id="map-frm" src="map.html" width="900px" height="600px" style="border: none;"></iframe>
+            <div id="friendlist" class="friendlist"></div>
+            <iframe id="map-frm" src="map.html" width="1080px" height="720px" style="border: none;"></iframe>
         </div>
     </div>
 
@@ -51,7 +66,7 @@
         iframe.contentWindow.init()
     }
 
-    async function set_accuracy() {
+    async function change_accuracy() {
         const acc = document.getElementById("acc-input").value;
         await window.pywebview.api.update_client_accuracy(acc);
     }
@@ -61,8 +76,16 @@
         iframe.contentWindow.update_map(pywebview.state.user_rect, pywebview.state.other_user_rects)
     }
 
-    function update_location(location) {
-        let path = ""
+    async function add_friend(){
+        const input = document.getElementById("add-input");
+        const friend = input.value;
+        input.value = "";
+        await window.pywebview.api.update_client_add_friend(friend);
+    }
+
+    function update_location() {
+        let path = "";
+        const location = pywebview.state.location;
 
         switch(location) {
             case 0:
@@ -86,6 +109,154 @@
 
     async function logout() {
         await window.pywebview.api.update_client_location(0);
+    }
+
+    function update_friendlist() {
+        const friends = pywebview.state.friends;
+        const friendlist = document.getElementById("friendlist");
+
+        for (let i = 0; i < friends.length; i++) {
+            const friend_container = document.createElement("div");
+            const row_container_1 = document.createElement("div");
+            const row_container_2 = document.createElement("div");
+            const tag = document.createElement("div");
+            const opt_btn = document.createElement("button");
+            const options = document.createElement("dialog");   
+            const min_p = document.createElement("p");
+            const max_p = document.createElement("p");
+            const slider = document.createElement("input");
+            const opt_img = document.createElement("img");
+            const remove_btn = document.createElement("button");
+            const close_btn = document.createElement("button");
+
+            friend_container.className = "friend_container";
+            row_container_1.className = "row_container";
+            row_container_2.className = "row_container";
+            tag.className = "friend";
+            options.className = "opt_window"
+            opt_btn.className = "img_btn";
+            min_p.className = "just_txt";
+            max_p.className = "just_txt";
+            slider.className = "depth_slider";
+
+            friend_container.id = friends[i];
+
+            tag.innerText = friends[i];
+            min_p.innerText = "min";
+            max_p.innerText = "max";
+            remove_btn.innerText = `remove ${friends[i]}?`
+            close_btn.innerText = "close";
+
+            opt_btn.onclick = () => options.showModal();
+            close_btn.onclick = () => options.close();
+            remove_btn.onclick = () => {
+                remove_friend(friends[i])
+                options.close();
+            };
+
+            opt_img.src="img/settings-4-32.png";
+            opt_img.alt="options";
+
+            slider.type = "range";
+            slider.min = 0;
+            slider.max = 100;
+            slider.value = 50;
+            slider.step = 10;
+
+            opt_btn.appendChild(opt_img);
+            options.appendChild(remove_btn);
+            options.appendChild(close_btn);
+            row_container_1.appendChild(tag);
+            row_container_1.appendChild(opt_btn);
+            row_container_1.appendChild(options);
+            row_container_2.appendChild(min_p);
+            row_container_2.appendChild(slider);
+            row_container_2.appendChild(max_p);
+            friend_container.appendChild(row_container_1);
+            friend_container.appendChild(row_container_2);
+            friendlist.appendChild(friend_container);
+        }
+    }
+
+    async function remove_friend(friend) {
+        await window.pywebview.api.update_client_remove_friend(friend);
+    }
+
+    async function answer_request(friend, answer) {
+        const requests = pywebview.state.requests;
+        await window.pywebview.api.update_client_accept_request(friend, answer);
+        pywebview.state.requests = requests.filter(req => req != friend);
+    }
+
+    function update_remove_friend() {
+        const friend = pywebview.state.remove;
+        const friend_div = document.getElementById(friend);
+        friend_div.remove();
+    }
+
+    function open_requests() {
+        const requests = document.getElementById("requests");
+        const req_list = pywebview.state.requests;
+        requests.innerHTML = "";
+
+        if (req_list.length == 0) {
+            alert("no new requests!");
+        } else {
+            const col = document.createElement("div");
+            col.classname = "friend_container";
+
+            for(let i = 0; i < req_list.length; i++) {
+                const cont = document.createElement("div")
+                const req = document.createElement("div");
+                const acc = document.createElement("button");
+                const dny = document.createElement("button");
+                const acc_img = document.createElement("img");
+                const dny_img = document.createElement("img");
+
+                cont.className = "row_container"
+                req.className = "friend";
+                acc.className = "img_btn";
+                dny.className = "img_btn";
+
+                cont.style = "margin: 10px;"
+                req.style = "padding: 5px;"
+                acc.style = "padding: 5px;"
+                dny.style = "padding: 5px;"
+
+                acc_img.src = "img/check-mark-32.png";
+                acc_img.alt = "accept request";
+                dny_img.src = "img/x-mark-32.png";
+                dny_img.alt = "deny request";
+                req.innerText = req_list[i];
+
+                acc.onclick = () => {
+                    answer_request(req_list[i], 0);
+                    requests.close();
+                };
+                dny.onclick = () => {
+                    answer_request(req_list[i], 1);
+                    requests.close();
+                };
+
+                acc.appendChild(acc_img);
+                dny.appendChild(dny_img);
+                cont.appendChild(req);
+                cont.appendChild(acc);
+                cont.appendChild(dny);
+                col.appendChild(cont);
+            }
+
+            const close_btn = document.createElement("button");
+            close_btn.style = "margin: 0px 0px 15px 15px;"
+            close_btn.innerText = "close";
+            close_btn.onclick = () => {
+                requests.close();
+            };
+
+            requests.appendChild(col);
+            requests.appendChild(close_btn);
+            requests.showModal();
+        }
     }
 
     window.onload = async function () {

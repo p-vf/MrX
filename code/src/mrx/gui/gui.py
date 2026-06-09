@@ -6,7 +6,7 @@ import time
 import queue
 
 from gui.types import BaseClient
-from gui.enums import LocationKind, ChangeKind, UpdateKind, from_number, Change
+from gui.enums import LocationKind, ChangeKind, UpdateKind, AnswerKind, from_number, Change
 from logic.geometry import to_json_serializable, Rect
 
 
@@ -35,13 +35,13 @@ class Gui:
         self.window = w
 
         self.window.events.closed += self.on_closed
-        self.generate_map([47.3745, 8.5445], 12)
+        self.generate_map([47.3745, 8.5445], 5)
 
     def get_update_queue(self):
         return self.updates
 
     def on_closed(self):
-        self.updates.put((-1,))
+        self.updates.put(Change(UpdateKind.OFFLINE, ()))
 
     def start(self):
         webview.start(debug=True, func=self.communication)
@@ -108,9 +108,15 @@ class Gui:
                 case UpdateKind.REQUEST_RESPONSE:
                     assert len(update.attrs) == 2
                     self.request_response(*update.attrs)
+                case UpdateKind.REQUEST_RECEIVED:
+                    assert len(update.attrs) == 1
+                    self.request_received(*update.attrs)
                 case UpdateKind.UPDATE_SPACIAL:
                     assert len(update.attrs) == 1
                     self.update_spacial(*update.attrs)
+                case UpdateKind.INIT_FRIENDLIST:
+                    assert len(update.attrs) == 1
+                    self.init_friendlist(*update.attrs)
                 case x:
                     assert False, f"unreachable: {x} not handled"
         except queue.Empty:
@@ -130,16 +136,30 @@ class Gui:
         self.window.evaluate_js(f"update_accuracy({accuracy})")
 
     def add_friend(self, friend):
-        pass
+        self.window.state.friends = [friend]
+        self.window.evaluate_js("update_friendlist()")
 
     def remove_friend(self, friend):
-        pass
+        self.window.state.remove = friend
+        self.window.evaluate_js("update_remove_friend()")
 
     def request_response(self, friend, answer):
-        pass
+        if answer == AnswerKind.ACCEPT:
+            self.window.state.friends = [friend]
+            self.window.evaluate_js("update_friendlist()")
+    
+    def request_received(self, friend):
+        req_list = self.window.state.requests
+        req_list = req_list + [friend] #append doesnt work!!!
+        self.window.state.requests = req_list
 
     def update_spacial(self, area_steps):
         pass
+
+    def init_friendlist(self, friends):
+        self.window.state.friends = friends
+        self.window.state.requests = []
+        self.window.evaluate_js("update_friendlist()")
 
     def generate_map(self, location, zoom):
         map = folium.Map(
@@ -175,7 +195,7 @@ class Gui:
 
                 var bounds = [[user.x_min, user.y_min], [user.x_max, user.y_max]];
 
-
+                console.log(`adding rect for friend: ${user_id}`);
                 if (!window.markers.has(user_id)) {
                     let new_user_a = L.rectangle(bounds, {color: "green", weight: 1});
                     new_user_a.addTo(window.marker_lyr);
@@ -192,6 +212,7 @@ class Gui:
                     rect = others[i][1]
                     other_id = others[i][0]
                     var bounds = [[rect.x_min, rect.y_min], [rect.x_max, rect.y_max]];
+                    console.log(`adding rect for friend: ${other_id}`);
                     if (!window.markers.has(other_id)) {
                         let new_user_a = L.rectangle(bounds, {color: "blue", weight: 1});
                         new_user_a.addTo(window.marker_lyr);
@@ -210,7 +231,9 @@ class Gui:
                 ]);
 
                 for (const id of window.markers.keys()) {
+                    console.log(`checking rect for friend: ${id}`);
                     if (!keep.has(id)) {
+                        console.log(`removing rect for friend: ${id}`);
                         window.marker_lyr.removeLayer(window.markers.get(id));
                         window.markers.delete(id);
                     } else {
@@ -257,7 +280,11 @@ class Api:
         self.changes.put(Change(ChangeKind.REMOVE_FRIEND, (friend,)))
 
     def update_client_accept_request(self, friend, answer):
-        self.changes.put(Change(ChangeKind.ACCEPT_REQUEST, (friend, answer,)))
+        answer_kind = AnswerKind.ACCEPT
+        if answer == 1:
+            answer_kind = AnswerKind.DENY
+
+        self.changes.put(Change(ChangeKind.ACCEPT_REQUEST, (friend, answer_kind,)))
 
     def close_client(self):
         self.changes.put(Change(ChangeKind.CLOSE_WINDOW, ()))

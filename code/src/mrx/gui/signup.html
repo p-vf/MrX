@@ -55,8 +55,9 @@
         await window.pywebview.api.update_client_signup(username, password);
     }
 
-    function update_location(location) {
-        let path = ""
+    function update_location() {
+        let path = "";
+        const location = pywebview.state.location;
 
         switch(location) {
             case 0:

@@ -30,11 +30,12 @@ class ClientStub(BaseClient):
     def handle_login(self, username, password):
         print("handling login")
         self.model.set_user(username=username)
-        self.model.update_location(LocationKind.Main)
+        self.model.update_location(LocationKind.MAIN)
 
         spacialstore = SpacialStore(Rect(45.6283, 5.8722, 47.6283, 10.8722))
-        spacialstore.insert("chad", [2, 3, 3, 0, 0, 0])
-        spacialstore.insert("chud", [2, 3, 1, 0, 0, 0])
+        spacialstore.insert("chad", [2, 3, 3, 0,])
+        spacialstore.insert("chud", [2, 0, 0, 0, 0])
+        spacialstore.insert("sub5", [2, 3, 0, 0, 0, 0])
 
         users = spacialstore.get_all_users()
         for user in users:
@@ -56,21 +57,34 @@ class ClientStub(BaseClient):
     def handle_init_map(self):
         print("handling initialization of map")
         self.model.update_map()
+        self.model.init_friendlist()
+        self.model.request_received("ben")
+        self.model.request_received("anderdingus")
     
+    # client made friend request to "friend"
+    # currently not adding "friend" : rect to 
     @override
     def handle_add_friend(self, friend):
         print(f"handling adding friend: {friend}")
+        self.model.add_friend(friend)
+        self.model.update_map()
 
+    # client wants to remove friend "friend"
     @override
     def handle_remove_friend(self, friend):
         print(f"handling removing friend: {friend}")
-        self.model.delete_others(friend)
+        self.model.remove_friend(friend)
+        self.model.update_map()
+
+    @override
+    def handle_request_received(self, friend):
+        self.model.request_received(friend)
     
+    # client wants to accept/reject the friend request from "friend"
     @override
     def handle_accept_request(self, friend, answer):
         print(f"handling accepting request: {friend}, {answer}")
-        if(answer == AnswerKind.ACCEPT):
-            self.model.insert_others(friend, None)
+        self.model.request_response(friend, answer)
             
     def start_gui(self):
         assert self.model is not None
