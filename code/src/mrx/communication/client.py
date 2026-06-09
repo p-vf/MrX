@@ -108,24 +108,43 @@ class Client(BaseClient):
 
     @override
     def handle_accuracy(self, friend, depth_level):
-        print("TODO implement handle_accuracy")
+        assert self.protocol is not None
+        self.protocol.send(encode_msg(ClientMessageType.SET_ACCURACY, [friend, str(depth_level)]))
+
+        print("Work in progress: handle_accuracy")
 
     @override
     def handle_init_map(self):
         assert self.protocol is not None
         self.protocol.model.update_map()
+        # TODO
     
     @override
     def handle_add_friend(self, friend):
-        print("TODO implement handle_add_friend")
+        assert self.protocol is not None
+        self.protocol.send(encode_msg(ClientMessageType.ADD_FRIEND, [friend]))
+
+        print("Work in progress: handle_add_friend")
 
     @override
     def handle_remove_friend(self, friend):
-        print("TODO implement handle_remove_friend")
+        assert self.protocol is not None
+        self.protocol.send(encode_msg(ClientMessageType.REMOVE_FRIEND, [friend]))
+        self.model.delete_others(friend)
+        self.model.remove_friend(friend)
+        self.model.update_map()
+
+        print("Work in progress: handle_remove_friend")
     
     @override
     def handle_accept_request(self, friend, answer):
-        print("TODO implement handle_accept_friend")
+        self.protocol.send(encode_msg(ClientMessageType.ACCEPT_REQUEST, [friend, answer]))
+
+        if answer == AnswerKind.ACCEPTED:
+            self.model.add_friend(friend)
+            self.model.insert_other(friend)
+            self.model.update_map()
+        print("Work in progress handle_accept_friend")
     # ==== END methods from BaseClient ====
 
     def start_gui(self):
@@ -173,6 +192,39 @@ class ClientProtocol:
                 print(f"login failed.. reason: {msg}")
             case ServerMessageType.UPDATE_USERAREA:
                 self.model.update_user_rect(msg[0], deserialize_rect(msg[1]))
+
+            case ServerMessageType.ADD_FRIEND:
+                self.model.insert_others(msg[0])
+                self.model.add_friend(msg[0])
+                self.model.update_map()
+
+            case ServerMessageType.REMOVE_FRIEND:
+                self.model.remove_others(msg[0])
+                self.model.delete_friend(msg[0])
+                self.model.update_map()
+
+            case ServerMessageType.REQUEST_RECEIVED:
+                self.model.request_recieved(msg[0])
+
+                # implement self.model.update_requests()?
+
+            case ServerMessageType.REQUEST_RESPONSE:
+                self.model.request_response(msg[0], msg[1])
+                if msg[1] == AnswerKind.ACCEPTED:
+                    self.model.insert_others(msg[0])
+                    self.model.add_friend(msg[0])
+                    self.model.update_map()
+
+                # Else remove pending request?
+
+            case ServerMessageType.SPACIAL_INFO:
+                print(f"SPACIAL INFO: {msg} not handled yet!")
+
+            case ServerMessageType.SPACIAL_PARTITIONING:
+                print(f"SPACIAL PARTITIONING: {msg} not handled yet!")
+
+
+
             case x:
                 print(f"TODO Message type {x} not handled yet")
 
