@@ -11,6 +11,7 @@ from communication.protocol import ClientMessageType, ServerMessageType, parse_c
 from database.create_user_db import create_user_db
 from database.user_db import UserDBManager
 from server.spacial_store import SpacialStore
+from server.permission_store import PermissionStore
 from logic.geometry import serialize_rect, Rect
 
 from communication.keygen import generate_key, get_or_generate_cert
@@ -32,11 +33,18 @@ spacialstore = SpacialStore(Rect(45.6283, 5.8722, 47.6283, 10.8722))
 spacialstore.insert("chad", [2, 3, 3, 0, 0, 0])
 spacialstore.insert("chud", [2, 3, 1, 0, 0, 0])
 
+permissionstore = PermissionStore()
+permissionstore.update("chad", "chud", 4)
+
+online_users: dict[str, "Server"] = dict()
+
 class Server(asyncio.Protocol):
     def __init__(self, db_manager: UserDBManager):
         self.peername = None
+        self.username = None
         self.db_manager = db_manager
         self.spacial_db = spacialstore
+        self.permissions_db = permissionstore
 
     # ==== START methods from asyncio.Protocol ====
     def connection_made(self, transport):
@@ -46,6 +54,8 @@ class Server(asyncio.Protocol):
         self.transport = transport
 
     def connection_lost(self, exc):
+        if self.username is not None:
+            del online_users[self.username]
         if exc is None:
             print("connection closed because of EOF being reached or because this side closed it")
         else:
@@ -66,8 +76,10 @@ class Server(asyncio.Protocol):
                 if login_successful:
                     # TODO the username should not have to be sent, the client
                     # should already know this information in principle
+                    online_users[username] = self
+                    self.username = username
                     self.send(encode_msg(ServerMessageType.LOGIN_SUCCESSFUL, [username]))
-                    self.send_user_areas()
+                    self.send_all_user_areas()
                     return
                 if self.db_manager.get_user(username) is None:
                     self.send(encode_msg(ServerMessageType.LOGIN_FAILED, ["user not in database"]))
@@ -88,15 +100,19 @@ class Server(asyncio.Protocol):
                     print(f"db error: {err}")
                     return
                 self.send(encode_msg(ServerMessageType.SIGNUP_SUCCESSFUL, []))
-                self.send_user_areas()
+                self.send_all_user_areas()
                 # TODO change the state of this connection (user is now logged in or smthn)
             case x:
                 print(f"Message type {x} not handled yet")
 
-    def send_user_areas(self):
+    def send_all_user_areas(self):
+        assert self.username is not None
         users = self.spacial_db.get_all_users()
         for user in users:
-            self.send(encode_msg(ServerMessageType.UPDATE_USERAREA, [user, serialize_rect(users[user])]))
+            perms = self.permissions_db.get_perm_for_user(self.username)
+            if user in perms:
+                acc = perms[user]
+                self.send(encode_msg(ServerMessageType.UPDATE_USERAREA, [user, serialize_rect(self.spacial_db.get_area(user, acc))]))
 
     def eof_received(self):
         print("other party closed connection")
