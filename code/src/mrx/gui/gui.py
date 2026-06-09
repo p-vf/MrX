@@ -19,7 +19,7 @@ class Gui:
     def __init__(self, client: BaseClient):
         path = os.path.abspath("src/mrx/gui/login.html")
         self.changes: queue.Queue[Change] = queue.Queue()
-        self.updates: queue.Queue[tuple] = queue.Queue()
+        self.updates: queue.Queue[Change] = queue.Queue()
         self.online = True
 
         self.api = Api(self.changes)
@@ -55,7 +55,7 @@ class Gui:
     def check_changes(self):
         try:
             change = self.changes.get(block=False)
-            print(f"change: {change}")
+            print(f"CHANGE: {change}")
             match change.kind:
                 case ChangeKind.LOCATION_UPDATE:
                     assert len(change.attrs) == 1
@@ -89,6 +89,7 @@ class Gui:
     def check_updates(self):
         try:
             update = self.updates.get(block=False)
+            print(f"UPDATE: {update}")
             match update.kind:
                 case UpdateKind.OFFLINE:
                     self.online = False
@@ -116,7 +117,8 @@ class Gui:
             pass
 
     def update_location(self, location: LocationKind):
-        self.window.evaluate_js(f"update_location({location.value})")
+        self.window.state.location = location.value
+        self.window.evaluate_js(f"update_location()")
 
     def update_map(self, user: Rect, others: dict[str, Rect]):
         self.window.state.user_rect = to_json_serializable(user)
@@ -183,6 +185,8 @@ class Gui:
                     old_user_c.setBounds(bounds)
                 }
 
+                console.log("added user marker");
+
 
                 for (let i = 0; i < others.length; i++) {
                     rect = others[i][1]
@@ -197,6 +201,8 @@ class Gui:
                         old_user_c.setBounds(bounds)
                     }
                 }
+
+                console.log("added others markers");
 
                 const keep = new Set([
                     user_id,
@@ -214,6 +220,8 @@ class Gui:
                         }).openTooltip();
                     }
                 }
+
+                console.log("removed old markers");
             }
         </script>
         """

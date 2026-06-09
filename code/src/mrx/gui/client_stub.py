@@ -1,6 +1,8 @@
 from communication.keygen import get_cert
 from typing import override
-from gui.enums import AnswerKind
+from gui.enums import AnswerKind, LocationKind
+from logic.geometry import Rect
+from server.spacial_store import SpacialStore
 
 from .model import Model
 from gui.types import BaseClient
@@ -22,18 +24,27 @@ class ClientStub(BaseClient):
     @override
     def handle_location(self, location):
         print("handling location change")
-        self.model.update_location(location.value)
+        self.model.update_location(location)
 
     @override
     def handle_login(self, username, password):
         print("handling login")
-        self.model.update_user(username=username)
+        self.model.set_user(username=username)
+        self.model.update_location(LocationKind.Main)
+
+        spacialstore = SpacialStore(Rect(45.6283, 5.8722, 47.6283, 10.8722))
+        spacialstore.insert("chad", [2, 3, 3, 0, 0, 0])
+        spacialstore.insert("chud", [2, 3, 1, 0, 0, 0])
+
+        users = spacialstore.get_all_users()
+        for user in users:
+            self.model.update_user_rect(user, users[user])
 
     @override
     def handle_signup(self, username, password):
         print("handling signup")
-        self.model.update_user(username=username)
-        self.model.update_location(2)
+        self.model.set_user(username=username)
+        self.model.update_location(LocationKind.MAIN)
 
     @override
     def handle_accuracy(self, friend, depth_level):
@@ -60,9 +71,13 @@ class ClientStub(BaseClient):
         print(f"handling accepting request: {friend}, {answer}")
         if(answer == AnswerKind.ACCEPT):
             self.model.insert_others(friend, None)
+            
+    def start_gui(self):
+        assert self.model is not None
+        self.model.start_gui()
 
 def main():
-    c = Client()
+    c = ClientStub()
     print(f"PID: {os.getpid()}")
 
     user = ["alex", [47.3745, 8.5445], 200]
@@ -71,7 +86,7 @@ def main():
             "max" : ([47.379, 8.54], 100)
         }
 
-    connected = threading.Event()
+    """ connected = threading.Event()
     end = threading.Event()
     def run_client():
         nonlocal connected, end, c
@@ -83,4 +98,6 @@ def main():
     c.start_gui()
     end.set()
     print(threading.enumerate())
-    t.join()
+    t.join() """
+
+    c.start_gui()
