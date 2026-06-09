@@ -38,8 +38,8 @@ def get_quadrant(r: Rect, quad: int) -> Rect | None:
             x_max = x_mid
             y_min = y_mid
         case Quadrant.SW:
-            x_max = x_mid
-            y_max = y_mid
+            x_min = x_mid
+            y_min = y_mid
         case _:
             return None
     return Rect(x_min, y_min, x_max, y_max)
@@ -56,4 +56,8 @@ def deserialize_rect(data: str) -> Rect:
 
 def is_inside(rect: Rect, x, y):
     return rect.x_min <= x < rect.x_max and rect.y_min <= y < rect.y_max
+
+if __name__ == "__main__":
+    for i in range(4):
+        print(f"{get_quadrant(Rect(0, 0, 1, 1), i)=}, {i=}")
 
