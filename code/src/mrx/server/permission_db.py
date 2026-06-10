@@ -38,7 +38,7 @@ class PermissionDBManager(PermissionStore):
     @override
     def update(self, subj_user_id: str, obj_user_id: str, accuracy: int):
         super().update(subj_user_id, obj_user_id, accuracy)
-        if accuracy == 0:
+        if accuracy < 0:
             self.cur.execute("DELETE FROM permission WHERE subject = ? AND object = ?", (subj_user_id, obj_user_id))
         else:
             self.cur.execute("INSERT OR REPLACE INTO permission (subject, object, accuracy) VALUES (?, ?, ?);", (subj_user_id, obj_user_id, accuracy))
@@ -74,15 +74,15 @@ def property_based_test_consistency():
         namelist.remove(name1)
         name2 = random.choice(namelist)
         namelist.append(name1)
-        accuracy = random.randint(0, 4)
+        accuracy = random.randint(-1, 4)
         p.update(name1, name2, accuracy)
         old_perms = copy.deepcopy(p._perms)
         p.load_perms()
         assert old_perms == p._perms, f"\n{old_perms}\n======\n{p._perms}"
     for s in p._perms:
         for o in p._perms[s]:
-            if p._perms[s][o] == 0:
-                assert False, f"0 stored in entry {s}, {o}"
+            if p._perms[s][o] == -1:
+                assert False, f"-1 stored in entry {s}, {o}"
     print("property based test successful")
 
 def manual_tests():
@@ -95,7 +95,7 @@ def manual_tests():
     p.update("chad", "chud", 2)
     p.update("chad", "bob", 3)
     p.update("alice", "chad", 2)
-    p.update("chud", "chad", 0)
+    p.update("chud", "chad", -1)
 
     assert p._perms == {"chad": {"chud": 2, "bob": 3}, "alice": {"chad": 2}}
     print("manual test successful")

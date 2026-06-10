@@ -3,10 +3,10 @@ class PermissionStore:
         self._perms: dict[str, dict[str, int]] = {}
 
     def update(self, subj_user_id: str, obj_user_id: str, accuracy: int):
-        """on accuracy == 0, the subject loses the object as friend"""
+        """on accuracy < 0, the subject loses the object as friend"""
         if subj_user_id == obj_user_id:
             print(f"WARNING (permissions): subject and object the same when updating: {subj_user_id}")
-        if accuracy == 0:
+        if accuracy < 0:
             if subj_user_id in self._perms and obj_user_id in self._perms[subj_user_id]:
                 del self._perms[subj_user_id][obj_user_id]
                 if self._perms[subj_user_id] == {}:
