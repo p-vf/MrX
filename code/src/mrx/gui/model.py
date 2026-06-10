@@ -53,7 +53,7 @@ class Model(BaseModel):
         del self.others[username]
 
     # tell the gui to add a specific friend
-    def add_friend(self, friend, accuracy):
+    def add_friend(self, friend, accuracy=1):
         payload = (friend, accuracy)
         self.updates.put(Change(UpdateKind.ADD_FRIEND, (payload,)))
 
@@ -84,7 +84,3 @@ class Model(BaseModel):
     # muss aufgerufen werden, damit die karte im gui sich updated
     def update_map(self):
         self.updates.put(Change(UpdateKind.UPDATE_MAP, (self.userarea, self.others,)))
-
-    def init_friendlist(self):
-        payload = [(key, 1) for key in self.others.keys()]
-        self.updates.put(Change(UpdateKind.INIT_FRIENDLIST, (payload,)))

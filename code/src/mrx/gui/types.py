@@ -75,10 +75,6 @@ class BaseModel:
     def update_spacial(self, min_area, max_area):
         pass
 
-    @abstractmethod
-    def init_friendlist(self):
-        pass
-
 # interfaces for mocking and stuff
 class BaseClient:
     @abstractmethod
@@ -103,14 +99,6 @@ class BaseClient:
 
     @abstractmethod
     def handle_others_accuracy(self, friend, depth_level):
-        pass
-
-    @abstractmethod
-    def handle_accuracy(self, depth_level):
-        pass
-
-    @abstractmethod
-    def handle_init_map(self):
         pass
 
     @abstractmethod

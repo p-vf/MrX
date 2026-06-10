@@ -34,6 +34,7 @@ class Gui:
             raise Exception("Window could not be created")
         self.window = w
 
+        self.window.state.requests = []
         self.window.events.closed += self.on_closed
         self.generate_map([47.3745, 8.5445], 5)
 
@@ -66,15 +67,12 @@ class Gui:
                 case ChangeKind.SIGNUP_TRIGGER:
                     assert len(change.attrs) == 2
                     self.client.handle_signup(*change.attrs)
-                case ChangeKind.ACCURACY_UPDATE:
-                    assert len(change.attrs) == 1
-                    self.client.handle_accuracy(*change.attrs)
                 case ChangeKind.ACCURACY_OTHERS_UPDATE:
                     assert len(change.attrs) == 2
                     self.client.handle_others_accuracy(*change.attrs)
-                case ChangeKind.MAP_INIT:
+                case ChangeKind.READY:
                     assert len(change.attrs) == 0
-                    self.client.handle_init_map()
+                    self.client.handle_ready()
                 case ChangeKind.ADD_FRIEND:
                     assert len(change.attrs) == 1
                     self.client.handle_add_friend(*change.attrs)
@@ -114,9 +112,6 @@ class Gui:
                 case UpdateKind.UPDATE_SPACIAL:
                     assert len(update.attrs) == 1
                     self.update_spacial(*update.attrs)
-                case UpdateKind.INIT_FRIENDLIST:
-                    assert len(update.attrs) == 1
-                    self.init_friendlist(*update.attrs)
                 case x:
                     assert False, f"unreachable: {x} not handled"
         except queue.Empty:
@@ -130,10 +125,6 @@ class Gui:
         self.window.state.user_rect = to_json_serializable(user)
         self.window.state.other_user_rects = [[o, to_json_serializable(others[o])] for o in others]
         self.window.evaluate_js("update_map()")
-
-    def update_accuracy(self, accuracy):
-        # TODO prevent possible js-injection here..
-        self.window.evaluate_js(f"update_accuracy({accuracy})")
 
     def add_friend(self, friend):
         self.window.state.friends = [friend]
@@ -150,11 +141,6 @@ class Gui:
 
     def update_spacial(self, area_steps):
         self.window.state.acc_steps = area_steps
-
-    def init_friendlist(self, friends):
-        self.window.state.friends = friends
-        self.window.state.requests = []
-        self.window.evaluate_js("update_friendlist()")
 
     def generate_map(self, location, zoom):
         map = folium.Map(
@@ -180,17 +166,18 @@ class Gui:
                 window.markers = new Map();
             }
 
-            async function update_map(user, others) {
-                console.log(user)
-                console.log(others)
+            function strFromBounds(bounds) {
+                const bounds_str = `${bounds[0][0]}-${bounds[0][1]}-${bounds[1][0]}-${bounds[1][1]}-`;
+                return bounds_str;
+            }
 
+            async function update_map(user, others) {
                 const user_id = "you";
                 const others_id = others.map(o => o[0]);
-
+                let overlapping = new Map()
 
                 var bounds = [[user.x_min, user.y_min], [user.x_max, user.y_max]];
 
-                console.log(`adding rect for friend: ${user_id}`);
                 if (!window.markers.has(user_id)) {
                     let new_user_a = L.rectangle(bounds, {color: "green", weight: 1});
                     new_user_a.addTo(window.marker_lyr);
@@ -200,25 +187,28 @@ class Gui:
                     old_user_c.setBounds(bounds)
                 }
 
-                console.log("added user marker");
-
+                overlapping.set(strFromBounds(bounds), [user_id]);
 
                 for (let i = 0; i < others.length; i++) {
                     rect = others[i][1]
                     other_id = others[i][0]
                     var bounds = [[rect.x_min, rect.y_min], [rect.x_max, rect.y_max]];
-                    console.log(`adding rect for friend: ${other_id}`);
+
                     if (!window.markers.has(other_id)) {
                         let new_user_a = L.rectangle(bounds, {color: "blue", weight: 1});
                         new_user_a.addTo(window.marker_lyr);
                         window.markers.set(other_id, new_user_a);
                     } else {
-                        let old_user_c = window.markers.get(user_id);
+                        let old_user_c = window.markers.get(other_id);
                         old_user_c.setBounds(bounds)
                     }
-                }
 
-                console.log("added others markers");
+                    if (overlapping.has(strFromBounds(bounds))) {
+                        overlapping.get(strFromBounds(bounds)).push(other_id);
+                    } else {
+                        overlapping.set(strFromBounds(bounds), [other_id])
+                    }
+                }
 
                 const keep = new Set([
                     user_id,
@@ -226,20 +216,38 @@ class Gui:
                 ]);
 
                 for (const id of window.markers.keys()) {
-                    console.log(`checking rect for friend: ${id}`);
                     if (!keep.has(id)) {
-                        console.log(`removing rect for friend: ${id}`);
                         window.marker_lyr.removeLayer(window.markers.get(id));
                         window.markers.delete(id);
                     } else {
-                        window.markers.get(id).bindTooltip(id, {
-                            permanent : true,
-                            direction : 'top'
-                        }).openTooltip();
+                        const rect_bounds = window.markers.get(id).getBounds();
+                        const sw = rect_bounds.getSouthWest();
+                        const ne = rect_bounds.getNorthEast();
+
+                        const bounds = [[sw.lat, sw.lng], [ne.lat, ne.lng]];
+                        const names = overlapping.get(strFromBounds(bounds));
+
+                        if (id == names.at(-1)) {
+                            names_str = "";
+
+                            for (let i = 0; i < names.length; i++) {
+                                if (i == names.length - 1) {
+                                    names_str += names[i];
+                                } else {
+                                    names_str += names[i] + ", ";
+                                }
+                            }
+
+                            window.markers.get(id).bindTooltip(names_str, {
+                                permanent : true,
+                                direction : 'top'
+                            }).openTooltip();
+                        } else {
+                            window.marker_lyr.removeLayer(window.markers.get(id));
+                            window.markers.delete(id);
+                        }
                     }
                 }
-
-                console.log("removed old markers");
             }
         </script>
         """
@@ -265,8 +273,8 @@ class Api:
     def update_client_others_accuracy(self, friend, depth_level):
         self.changes.put(Change(ChangeKind.ACCURACY_OTHERS_UPDATE, (friend, depth_level,)))
 
-    def update_client_init_map(self):
-        self.changes.put(Change(ChangeKind.MAP_INIT, ()))
+    def update_client_ready(self):
+        self.changes.put(Change(ChangeKind.READY, ()))
     
     def update_client_add_friend(self, friend):
         self.changes.put(Change(ChangeKind.ADD_FRIEND, (friend,)))

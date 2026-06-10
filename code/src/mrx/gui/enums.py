@@ -5,13 +5,12 @@ class ChangeKind(Enum):
     LOCATION_UPDATE = 0
     LOGIN_TRIGGER = 1
     SIGNUP_TRIGGER = 2
-    ACCURACY_UPDATE = 3
-    ACCURACY_OTHERS_UPDATE = 4
-    MAP_INIT = 5
-    ADD_FRIEND = 6
-    REMOVE_FRIEND = 7
-    ACCEPT_REQUEST = 8
-    CLOSE_WINDOW = 9
+    ACCURACY_OTHERS_UPDATE = 3
+    READY = 4
+    ADD_FRIEND = 5
+    REMOVE_FRIEND = 6
+    ACCEPT_REQUEST = 7
+    CLOSE_WINDOW = 8
 
 @unique
 class UpdateKind(Enum):
@@ -22,8 +21,7 @@ class UpdateKind(Enum):
     REMOVE_FRIEND = 3
     REQUEST_RECEIVED = 4
     UPDATE_SPACIAL = 5
-    INIT_FRIENDLIST = 6
-    UPDATE_ACCURACY = 7
+    UPDATE_ACCURACY = 6
 
 @unique
 class AnswerKind(Enum):

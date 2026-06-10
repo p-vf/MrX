@@ -24,6 +24,7 @@ class SpacialStore:
     def get_path(self, user_id: str) -> list[int]:
         return self._user_path[user_id]
 
+    # THATS WHY HES THE GOAT, ... THE GOATTTT!!!
     # https://www.johndcook.com/blog/2023/02/21/sphere-grid-area/
     def get_accuracy_per_depth(self, num_accuracies) -> list[float]:
         """returns a list, where the i-th element corresponds to an estimate*
