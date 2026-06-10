@@ -9,6 +9,12 @@ class ServerMessageType(enum.Enum):
     SIGNUP_SUCCESSFUL = 2
     SIGNUP_FAILED = 3
     UPDATE_USERAREA = 4
+    ADD_FRIEND = 5
+    REMOVE_FRIEND = 6
+    REQUEST_RECEIVED = 7
+    REQUEST_RESPONSE = 8
+    SPACIAL_INFO = 9
+    SPACIAL_PARTITIONING = 10
 
 @enum.unique
 class ClientMessageType(enum.Enum):
