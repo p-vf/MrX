@@ -10,9 +10,9 @@ import json
 from communication.protocol import ClientMessageType, ServerMessageType, parse_client_msg, encode_msg
 from database.create_user_db import create_user_db
 from database.user_db import UserDBManager
-from server.spacial_store import SpacialStore
-from server.permission_db import PermissionDBManager
-from server.pending_request_db import PendingRequestDBManager
+from server.spacial_db import SpacialDBManager, create_spacial_db
+from server.permission_db import PermissionDBManager, create_perm_db
+from server.pending_request_db import PendingRequestDBManager, create_pending_request_db
 from logic.geometry import serialize_rect, Rect
 
 from communication.keygen import generate_key, get_or_generate_cert
@@ -30,14 +30,18 @@ def main() -> None:
 
 # example region: rect that bounds Switzerland
 # TODO store these locations
-spacialstore = SpacialStore(Rect(45.6283, 5.8722, 47.6283, 10.8722))
+
+create_spacial_db(Path("user.db"))
+spacialstore = SpacialDBManager(Rect(45.6283, 5.8722, 47.6283, 10.8722), Path("user.db"))
+spacialstore.load_spacial_data()
 spacialstore.insert("chad", [2, 3, 3, 0, 0, 0])
 spacialstore.insert("chud", [2, 3, 1, 0, 0, 0])
 
-pending_request_store = PendingRequestDBManager(Path("pending_request.db"))
-
-permissionstore = PermissionDBManager(Path("perms.db"))
+create_perm_db(Path("user.db"))
+permissionstore = PermissionDBManager(Path("user.db"))
 permissionstore.update("chad", "chud", 4)
+permissionstore.update("chud", "chad", 2)
+permissionstore.load_perms()
 
 online_users: dict[str, "Server"] = dict()
 

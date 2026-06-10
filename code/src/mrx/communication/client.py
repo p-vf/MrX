@@ -4,6 +4,8 @@ from pathlib import Path
 import selectors
 from gui.types import BaseClient, BaseModel
 from gui.model import Model
+from logic.geometry import deserialize_rect
+from server.spacial_store import SpacialStore
 from typing import override
 import threading
 from communication.protocol import ServerMessageType, ClientMessageType, parse_server_msg, encode_msg
@@ -179,18 +181,20 @@ class ClientProtocol:
             print(f"parsing of message {unparsed_msg} failed: {err}")
             return
         match msg_type:
-            case ServerMessageType.LOGIN_SUCCESSFUL:
-                username, = msg
-                print(f"successfully logged in!")
+            case ServerMessageType.LOGIN_SUCCESSFUL | ServerMessageType.SIGNUP_SUCCESSFUL:
+                username, spacial_kind, spacial_rect = msg
+                startrect = deserialize_rect(spacial_rect)
+                s = SpacialStore(startrect)
+                accuracies = s.get_accuracy_per_depth(20)
+                # TODO (p-vf) do something with those accuracies (update sliders)
+                if msg_type == ServerMessageType.LOGIN_SUCCESSFUL:
+                    print(f"successfully logged in!")
+                else:
+                    print(f"successfully signed up!")
                 self.model.set_user(username)
                 self.model.update_location(LocationKind.MAIN)
             case ServerMessageType.LOGIN_FAILED:
                 print(f"login failed.. reason: {msg}")
-            case ServerMessageType.SIGNUP_SUCCESSFUL:
-                username, = msg
-                print(f"successfully signed up!")
-                self.model.set_user(username)
-                self.model.update_location(LocationKind.MAIN)
             case ServerMessageType.SIGNUP_FAILED:
                 print(f"login failed.. reason: {msg}")
             case ServerMessageType.UPDATE_USER_AREA:

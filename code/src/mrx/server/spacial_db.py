@@ -3,6 +3,7 @@ from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 from server.spacial_store import SpacialStore
+from logic.geometry import Rect
 from typing import override
 import sqlite3
 import base64
@@ -12,7 +13,8 @@ import random
 import copy
 
 class SpacialDBManager(SpacialStore):
-    def __init__(self, db: Path):
+    def __init__(self, startrect: Rect, db: Path):
+        super().__init__(startrect)
         self.conn = sqlite3.connect(db)
         self.cur = self.conn.cursor()
         self.load_spacial_data()
@@ -60,7 +62,7 @@ def property_based_tests():
         os.remove(test_db)
     create_spacial_db(test_db)
     print("running property based test")
-    s = SpacialDBManager(test_db)
+    s = SpacialDBManager(Rect(0,0,0,0), test_db)
     namelist = ["chad", "chud", "alice", "bob", "carol", "diogenes", "hrodebert"]
     # check that each change is reflected properly in the database
     for _ in range(500):
@@ -78,7 +80,7 @@ def manual_tests():
         os.remove(test_db)
     create_spacial_db(test_db)
     print("running manual tests")
-    s = SpacialDBManager(test_db)
+    s = SpacialDBManager(Rect(0,0,0,0), test_db)
     s.insert("chad", [1, 2, 3, 0])
     s.insert("chud", [1, 2, 3, 3, 0])
     s.insert("chad", [1, 2, 3, 3, 0, 0])
