@@ -20,11 +20,10 @@ class UpdateKind(Enum):
     UPDATE_MAP = 1
     ADD_FRIEND = 2
     REMOVE_FRIEND = 3
-    REQUEST_RESPONSE = 4
-    REQUEST_RECEIVED = 5
-    UPDATE_SPACIAL = 6
-    INIT_FRIENDLIST = 7
-    UPDATE_ACCURACY = 8
+    REQUEST_RECEIVED = 4
+    UPDATE_SPACIAL = 5
+    INIT_FRIENDLIST = 6
+    UPDATE_ACCURACY = 7
 
 @unique
 class AnswerKind(Enum):

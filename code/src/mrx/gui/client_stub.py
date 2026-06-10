@@ -74,10 +74,6 @@ class ClientStub(BaseClient):
         print(f"handling removing friend: {friend}")
         self.model.remove_friend(friend)
         self.model.update_map()
-
-    @override
-    def handle_request_received(self, friend):
-        self.model.request_received(friend)
     
     # client wants to accept/reject the friend request from "friend"
     @override

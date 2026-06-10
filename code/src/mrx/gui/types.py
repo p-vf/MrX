@@ -68,7 +68,7 @@ class BaseModel:
         pass
 
     @abstractmethod
-    def request_response(self, friend, answer):
+    def request_recieved(self, friend):
         pass
 
     @abstractmethod

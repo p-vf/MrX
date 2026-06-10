@@ -108,9 +108,6 @@ class Gui:
                 case UpdateKind.REMOVE_FRIEND:
                     assert len(update.attrs) == 1
                     self.remove_friend(*update.attrs)
-                case UpdateKind.REQUEST_RESPONSE:
-                    assert len(update.attrs) == 2
-                    self.request_response(*update.attrs)
                 case UpdateKind.REQUEST_RECEIVED:
                     assert len(update.attrs) == 1
                     self.request_received(*update.attrs)
