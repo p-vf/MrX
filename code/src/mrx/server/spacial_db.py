@@ -5,7 +5,8 @@ sys.path.append(str(Path(__file__).parent.parent))
 from server.spacial_store import SpacialStore
 from typing import override
 import sqlite3
-import pickle
+import base64
+import json
 import os
 import random
 import copy
@@ -19,7 +20,7 @@ class SpacialDBManager(SpacialStore):
     @override
     def insert(self, user_id: str, quad_sequence: list[int]):
         super().insert(user_id, quad_sequence)
-        self.cur.execute("INSERT OR REPLACE INTO user_area (user, area) VALUES (?, ?);", (user_id, pickle.dumps(quad_sequence)))
+        self.cur.execute("INSERT OR REPLACE INTO user_area (user, area) VALUES (?, ?);", (user_id, base64.b64encode(json.dumps(quad_sequence).encode())))
         self.conn.commit()
 
     def load_spacial_data(self):
@@ -27,7 +28,7 @@ class SpacialDBManager(SpacialStore):
         self._user_path = {}
         areas = self.cur.fetchall()
         for user, area in areas:
-            super().insert(user, pickle.loads(area))
+            super().insert(user, json.loads(base64.b64decode(area).decode()))
 
     def close(self):
         if self.cur:
