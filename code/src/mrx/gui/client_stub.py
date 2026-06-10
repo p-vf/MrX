@@ -65,7 +65,7 @@ class ClientStub(BaseClient):
     @override
     def handle_add_friend(self, friend):
         print(f"handling adding friend: {friend}")
-        self.model.add_friend(friend)
+        self.model.add_friend(friend, 1)
         self.model.update_map()
 
     # client wants to remove friend "friend"
@@ -83,7 +83,8 @@ class ClientStub(BaseClient):
     @override
     def handle_accept_request(self, friend, answer):
         print(f"handling accepting request: {friend}, {answer}")
-        self.model.request_response(friend, answer)
+        if(answer == AnswerKind.ACCEPT):
+            self.model.add_friend(friend, 1)
             
     def start_gui(self):
         assert self.model is not None

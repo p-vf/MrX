@@ -53,16 +53,13 @@ class Model(BaseModel):
         del self.others[username]
 
     # tell the gui to add a specific friend
-    def add_friend(self, friend):
-        self.updates.put(Change(UpdateKind.ADD_FRIEND, (friend,)))
+    def add_friend(self, friend, accuracy):
+        payload = (friend, accuracy)
+        self.updates.put(Change(UpdateKind.ADD_FRIEND, (payload,)))
 
     # tell gui to remove a specific friend
     def remove_friend(self, friend):
         self.updates.put(Change(UpdateKind.REMOVE_FRIEND, (friend,)))
-    
-    # tell the gui you got an answer from a friend request
-    def request_response(self, friend, answer):
-        self.updates.put(Change(UpdateKind.REQUEST_RESPONSE, (friend, answer)))
 
     def request_received(self, friend):
         self.updates.put(Change(UpdateKind.REQUEST_RECEIVED, (friend,)))

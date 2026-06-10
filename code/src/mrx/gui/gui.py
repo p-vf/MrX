@@ -145,11 +145,6 @@ class Gui:
     def remove_friend(self, friend):
         self.window.state.remove = friend
         self.window.evaluate_js("update_remove_friend()")
-
-    def request_response(self, friend, answer):
-        if answer == AnswerKind.ACCEPT:
-            self.window.state.friends = [friend]
-            self.window.evaluate_js("update_friendlist()")
     
     def request_received(self, friend):
         req_list = self.window.state.requests

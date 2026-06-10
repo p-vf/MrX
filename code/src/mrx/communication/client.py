@@ -192,7 +192,6 @@ class ClientProtocol:
                 print(f"login failed.. reason: {msg}")
             case ServerMessageType.UPDATE_USERAREA:
                 self.model.update_user_rect(msg[0], deserialize_rect(msg[1]))
-<<<<<<< HEAD
 
             case ServerMessageType.ADD_FRIEND:
                 self.model.insert_others(msg[0])
@@ -226,10 +225,6 @@ class ClientProtocol:
 
 
 
-=======
-            case ServerMessageType.ADD_FRIEND:
-                self.model.add_friend(msg[0])
->>>>>>> 2c65ebc (Add updates to the gui, not final yet)
             case x:
                 print(f"TODO Message type {x} not handled yet")
 

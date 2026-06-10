@@ -11,7 +11,7 @@
 
 <body>
     <div id="main">
-        <div style="position: relative; display: flex; align-items: center; justify-content: center; padding: 20px;">
+        <div style="position: relative; display: flex; align-items: center; justify-content: center; padding: 20px 20px 40px 20px;">
 
             <div style="position: absolute; left: 50px; display: flex; justify-content: center; align-items: center">
                 <button class="img_btn" onclick="open_requests()" style="margin-right: 10px;">
@@ -23,25 +23,17 @@
                 <button id="add-btn" onclick="add_friend()" style="margin-right: 10px; margin-left: 10px">
                     Add friend
                 </button>
-                <input id="add-input" type="text" id="acc-input" placeholder="Username..." style="margin-right: 10px; margin-left: 10px">
+                <input id="add-input" type="text" placeholder="Username..." style="margin-right: 10px; margin-left: 10px">
             </div>
                 
-            <h1 id="acc-hdr">Current accuracy: 300m</h1>
+            <h1 id="acc-hdr">See Where Your Friends Are</h1>
 
             <button onclick="logout()" style="position: absolute; right: 50px;">
                 Log out
             </button>
 
         </div>
-
-        <div style="display: flex; justify-content: center; align-items: center; padding-top: 10px; padding-bottom: 20px">
-            <button id="acc-btn" onclick="change_accuracy()" style="margin-right: 10px; margin-left: 10px">
-                    Set Accuracy
-            </button>
-            <input type="text" id="acc-input" placeholder="Accuracy..." style="margin-right: 10px; margin-left: 10px">
-        </div>
-
-        <div style="display: flex; justify-content: center; align-items: center; padding: 20px;">
+        <div style="display: flex; justify-content: center; align-items: center; padding: 40px 20px 20px 20px;">
             <div id="friendlist" class="friendlist"></div>
             <iframe id="map-frm" src="map.html" width="1080px" height="720px" style="border: none;"></iframe>
         </div>
@@ -64,11 +56,6 @@
     function init_map() {
         const iframe = document.getElementById("map-frm");
         iframe.contentWindow.init()
-    }
-
-    async function change_accuracy() {
-        const acc = document.getElementById("acc-input").value;
-        await window.pywebview.api.update_client_accuracy(acc);
     }
 
     function update_map() {
@@ -100,11 +87,6 @@
         }
 
         window.location.href = path;
-    }
-
-    function update_accuracy(accuracy) {
-        const hdr = document.getElementById("acc-hdr");
-        hdr.innerText = "Current accuracy: " + accuracy + "m"
     }
 
     async function logout() {
