@@ -86,4 +86,4 @@ area per depth level for update spacial
 - `remove friend [<name>]` Remove friend with name: `<name>`
 - `request received [<name_from>]` I got a friend request from friend: `<name_from>`
 - `request response [<name_from>, <ans>]` I got an answer from my friend request from friend: `<name>` with answer: `<ans>`
-- `spacial info [<min area>, <max area>]` update the info for the accuracy sliders
+- `update spacial [<area_depth_0>, ..., <area_depth_n>]` update the info for the accuracy sliders

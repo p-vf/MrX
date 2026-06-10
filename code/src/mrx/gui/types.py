@@ -102,7 +102,11 @@ class BaseClient:
         pass
 
     @abstractmethod
-    def handle_accuracy(self, friend, depth_level):
+    def handle_others_accuracy(self, friend, depth_level):
+        pass
+
+    @abstractmethod
+    def handle_accuracy(self, depth_level):
         pass
 
     @abstractmethod

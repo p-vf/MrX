@@ -67,8 +67,11 @@ class Gui:
                     assert len(change.attrs) == 2
                     self.client.handle_signup(*change.attrs)
                 case ChangeKind.ACCURACY_UPDATE:
-                    assert len(change.attrs) == 2
+                    assert len(change.attrs) == 1
                     self.client.handle_accuracy(*change.attrs)
+                case ChangeKind.ACCURACY_OTHERS_UPDATE:
+                    assert len(change.attrs) == 2
+                    self.client.handle_others_accuracy(*change.attrs)
                 case ChangeKind.MAP_INIT:
                     assert len(change.attrs) == 0
                     self.client.handle_init_map()
@@ -154,7 +157,7 @@ class Gui:
         self.window.state.requests = req_list
 
     def update_spacial(self, area_steps):
-        pass
+        self.window.state.acc_steps = area_steps
 
     def init_friendlist(self, friends):
         self.window.state.friends = friends
@@ -267,8 +270,8 @@ class Api:
     def update_client_signup(self, username, password):
         self.changes.put(Change(ChangeKind.SIGNUP_TRIGGER, (username, password)))
 
-    def update_client_accuracy(self, friend, depth_level):
-        self.changes.put(Change(ChangeKind.ACCURACY_UPDATE, (friend, depth_level,)))
+    def update_client_others_accuracy(self, friend, depth_level):
+        self.changes.put(Change(ChangeKind.ACCURACY_OTHERS_UPDATE, (friend, depth_level,)))
 
     def update_client_init_map(self):
         self.changes.put(Change(ChangeKind.MAP_INIT, ()))

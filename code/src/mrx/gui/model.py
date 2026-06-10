@@ -12,7 +12,7 @@ class Model(BaseModel):
         self.others: dict[str, Rect] = {} # area of the users friends
         self.area_steps: list[int] | None = None # this is for the slider so you can set the accuracy for ur friends
         # [4000m2, 1000m2, 250m2 ... 40m2]
-
+ 
         self.gui = Gui(client)
         self.updates = self.gui.get_update_queue()
     
@@ -70,7 +70,7 @@ class Model(BaseModel):
     # this is needed so the sliders in the gui can be instantiated correctly
     def update_spacial(self, area_steps):
         # area_steps ist eine liste mit den areas per depth level
-        self.accuracy_steps = (area_steps)
+        self.area_steps = area_steps
         self.updates.put(Change(UpdateKind.UPDATE_SPACIAL, (area_steps,)))
     
     def update_others(self, username, position=None, accuracy=None):
@@ -89,4 +89,5 @@ class Model(BaseModel):
         self.updates.put(Change(UpdateKind.UPDATE_MAP, (self.userarea, self.others,)))
 
     def init_friendlist(self):
-        self.updates.put(Change(UpdateKind.INIT_FRIENDLIST, (list(self.others.keys()),)))
+        payload = [(key, 1) for key in self.others.keys()]
+        self.updates.put(Change(UpdateKind.INIT_FRIENDLIST, (payload,)))

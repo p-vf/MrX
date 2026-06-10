@@ -117,40 +117,43 @@
 
         for (let i = 0; i < friends.length; i++) {
             const friend_container = document.createElement("div");
-            const row_container_1 = document.createElement("div");
-            const row_container_2 = document.createElement("div");
+            const row_container = document.createElement("div");
+            const min_max_container = document.createElement("div");
             const tag = document.createElement("div");
             const opt_btn = document.createElement("button");
             const options = document.createElement("dialog");   
-            const min_p = document.createElement("p");
-            const max_p = document.createElement("p");
+            const acc_text = document.createElement("p");
+            const acc_value = document.createElement("p");
             const slider = document.createElement("input");
             const opt_img = document.createElement("img");
             const remove_btn = document.createElement("button");
             const close_btn = document.createElement("button");
 
             friend_container.className = "friend_container";
-            row_container_1.className = "row_container";
-            row_container_2.className = "row_container";
+            row_container.className = "row_container";
+            min_max_container.className = "friend_container"
             tag.className = "friend";
             options.className = "opt_window"
             opt_btn.className = "img_btn";
-            min_p.className = "just_txt";
-            max_p.className = "just_txt";
+            acc_text.className = "just_txt";
+            acc_value.className = "just_txt";
             slider.className = "depth_slider";
 
-            friend_container.id = friends[i];
+            min_max_container.style = "display: flex; justify-content: space-between; align-items: center;"
+            friend_container.style = "margin-bottom: 5px;";
+            row_container.style = "margin-bottom: 5px;";
 
-            tag.innerText = friends[i];
-            min_p.innerText = "min";
-            max_p.innerText = "max";
-            remove_btn.innerText = `remove ${friends[i]}?`
+            friend_container.id = friends[i][0];
+
+            tag.innerText = friends[i][0];
+            acc_text.innerText = "accuracy";
+            remove_btn.innerText = `remove ${friends[i][0]}?`
             close_btn.innerText = "close";
 
             opt_btn.onclick = () => options.showModal();
             close_btn.onclick = () => options.close();
             remove_btn.onclick = () => {
-                remove_friend(friends[i])
+                remove_friend(friends[i][0])
                 options.close();
             };
 
@@ -159,23 +162,37 @@
 
             slider.type = "range";
             slider.min = 0;
-            slider.max = 100;
-            slider.value = 50;
-            slider.step = 10;
+            slider.max = pywebview.state.acc_steps.length - 1;
+            slider.value = friends[i][1];
+            slider.step = 1;
+
+            slider.addEventListener('input', e => {
+                acc_value.innerText = pywebview.state.acc_steps[e.target.value];
+            });
+
+            slider.addEventListener('pointerup', e => {
+                change_other_accuracy(friends[i][0], e.target.value);
+            });
+
+            acc_value.innerText = pywebview.state.acc_steps[slider.value];
 
             opt_btn.appendChild(opt_img);
             options.appendChild(remove_btn);
             options.appendChild(close_btn);
-            row_container_1.appendChild(tag);
-            row_container_1.appendChild(opt_btn);
-            row_container_1.appendChild(options);
-            row_container_2.appendChild(min_p);
-            row_container_2.appendChild(slider);
-            row_container_2.appendChild(max_p);
-            friend_container.appendChild(row_container_1);
-            friend_container.appendChild(row_container_2);
+            row_container.appendChild(tag);
+            row_container.appendChild(opt_btn);
+            row_container.appendChild(options);
+            min_max_container.appendChild(acc_text);
+            min_max_container.appendChild(acc_value);
+            friend_container.appendChild(row_container);
+            friend_container.appendChild(min_max_container);
+            friend_container.appendChild(slider);
             friendlist.appendChild(friend_container);
         }
+    }
+
+    async function change_other_accuracy(friend, value) {
+        await window.pywebview.api.update_client_others_accuracy(friend, value);
     }
 
     async function remove_friend(friend) {

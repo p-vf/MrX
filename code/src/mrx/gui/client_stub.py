@@ -48,15 +48,14 @@ class ClientStub(BaseClient):
         self.model.update_location(LocationKind.MAIN)
 
     @override
-    def handle_accuracy(self, friend, depth_level):
-        print("handling accuracy")
-        #self.model.update_user(accuracy=accuracy)
-        self.model.update_map()
+    def handle_others_accuracy(self, friend, depth_level):
+        print(f"handling {friend}s accuracy, setting it to: {depth_level}")
 
     @override
     def handle_init_map(self):
         print("handling initialization of map")
         self.model.update_map()
+        self.model.update_spacial([4000, 1000, 250, 100])
         self.model.init_friendlist()
         self.model.request_received("ben")
         self.model.request_received("anderdingus")
