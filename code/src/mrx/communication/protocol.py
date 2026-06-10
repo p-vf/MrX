@@ -8,18 +8,21 @@ class ServerMessageType(enum.Enum):
     LOGIN_FAILED = 1
     SIGNUP_SUCCESSFUL = 2
     SIGNUP_FAILED = 3
-    UPDATE_USERAREA = 4
-    ADD_FRIEND = 5
-    REMOVE_FRIEND = 6
-    REQUEST_RECEIVED = 7
-    REQUEST_RESPONSE = 8
-    SPACIAL_INFO = 9
-    SPACIAL_PARTITIONING = 10
+    UPDATE_USER_AREA = 4
+    FRIEND_REQUEST = 5
+    FRIEND_REQUEST_ANSWER = 6
+    FRIEND_REMOVE = 7
+    SET_FRIEND_ACCURACY = 8
 
 @enum.unique
 class ClientMessageType(enum.Enum):
     LOGIN = 0
     SIGNUP = 1
+    UPDATE_FRIEND_ACCURACY = 2
+    FRIEND_REQUEST = 3
+    FRIEND_REQUEST_ANSWER = 4
+    FRIEND_REMOVE = 5
+    UPDATE_USER_AREA = 6
 
 # TODO (p-vf) this could be made a bit more smart: instead of just encoding and
 # decoding the data as list[str], we could encode and decode the data according

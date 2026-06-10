@@ -19,7 +19,7 @@ class PermissionStore:
             self._perms[subj_user_id] = {}
         self._perms[subj_user_id][obj_user_id] = accuracy
 
-    def get_perm_for_user(self, user_id: str):
+    def get_perm_for_user(self, user_id: str) -> dict[str, int]:
         if user_id not in self._perms:
             return {}
         return self._perms[user_id]

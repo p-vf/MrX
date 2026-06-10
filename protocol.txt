@@ -1,0 +1,21 @@
+Server -> Client
+
+LOGIN_SUCCESSFUL: username, spacial_part_kind (a number, in our case 1), spacial_part_params (in our case a serialized rect)
+LOGIN_FAILED
+SIGNUP_SUCCESSFUL: username, spacial_part_kind, spacial_part_params (see LOGIN_SUCCESSFUL)
+SIGNUP_FAILED
+UPDATE_USER_AREA: username, path (use json twin)
+FRIEND_REQUEST: friend_username (friend_username wants to add client)
+FRIEND_REQUEST_ANSWER: friend_username, answer: 0 | 1 (friend_username answerwed with answer to request)
+FRIEND_REMOVE: friend_username (friend_username removed you, so remove him too)
+SET_FRIEND_ACCURACY: friend_username, depth_level (create entry in friends list for user friend_username with slider in position depth_level)
+
+Client -> Server
+
+LOGIN: username, password
+SIGNUP: username, password
+UPDATE_USER_AREA: path (user json twin)
+FRIEND_REQUEST: friend_username (client wants to add friend_username)
+FRIEND_REQUEST_ANSWER: friend_username, answer: 0 | 1 (answer request from friend_username with answer)
+FRIEND_REMOVE: friend_username (client removed friend_username)
+UPDATE_FRIEND_ACCURACY: friend_username, depth_level

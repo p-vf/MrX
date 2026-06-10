@@ -11,7 +11,8 @@ from communication.protocol import ClientMessageType, ServerMessageType, parse_c
 from database.create_user_db import create_user_db
 from database.user_db import UserDBManager
 from server.spacial_store import SpacialStore
-from server.permission_store import PermissionStore
+from server.permission_db import PermissionDBManager
+from server.pending_request_db import PendingRequestDBManager
 from logic.geometry import serialize_rect, Rect
 
 from communication.keygen import generate_key, get_or_generate_cert
@@ -33,7 +34,9 @@ spacialstore = SpacialStore(Rect(45.6283, 5.8722, 47.6283, 10.8722))
 spacialstore.insert("chad", [2, 3, 3, 0, 0, 0])
 spacialstore.insert("chud", [2, 3, 1, 0, 0, 0])
 
-permissionstore = PermissionStore()
+pending_request_store = PendingRequestDBManager(Path("pending_request.db"))
+
+permissionstore = PermissionDBManager(Path("perms.db"))
 permissionstore.update("chad", "chud", 4)
 
 online_users: dict[str, "Server"] = dict()
@@ -45,6 +48,7 @@ class Server(asyncio.Protocol):
         self.db_manager = db_manager
         self.spacial_db = spacialstore
         self.permissions_db = permissionstore
+        self.pending_requests = set()
 
     # ==== START methods from asyncio.Protocol ====
     def connection_made(self, transport):
@@ -78,8 +82,8 @@ class Server(asyncio.Protocol):
                     # should already know this information in principle
                     online_users[username] = self
                     self.username = username
-                    self.send(encode_msg(ServerMessageType.LOGIN_SUCCESSFUL, [username]))
-                    self.send_all_user_areas()
+                    self.send(encode_msg(ServerMessageType.LOGIN_SUCCESSFUL, [username, str(1), serialize_rect(self.spacial_db.startrect)]))
+                    self.send_all_user_areas_and_accuracies()
                     return
                 if self.db_manager.get_user(username) is None:
                     self.send(encode_msg(ServerMessageType.LOGIN_FAILED, ["user not in database"]))
@@ -99,20 +103,74 @@ class Server(asyncio.Protocol):
                     self.send(encode_msg(ServerMessageType.SIGNUP_FAILED, ["db error"]))
                     print(f"db error: {err}")
                     return
-                self.send(encode_msg(ServerMessageType.SIGNUP_SUCCESSFUL, []))
-                self.send_all_user_areas()
+                self.send(encode_msg(ServerMessageType.SIGNUP_SUCCESSFUL, [username, str(1), serialize_rect(self.spacial_db.startrect)]))
+                self.send_all_user_areas_and_accuracies()
                 # TODO change the state of this connection (user is now logged in or smthn)
+            case ClientMessageType.UPDATE_FRIEND_ACCURACY:
+                assert self.username is not None
+                user, depth_str = msg
+                depth = int(depth_str)
+                self.permissions_db.update(user, self.username, depth)
+            case ClientMessageType.FRIEND_REQUEST:
+                assert self.username is not None
+                user, = msg
+                # TODO maybe we have to store these somewhere?
+                if user in online_users:
+                    online_users[user].send(encode_msg(ServerMessageType.FRIEND_REQUEST, [self.username]))
+                    online_users[user].pending_requests.add(self.username)
+                else:
+                    # TODO:
+                    print("TODO handle friend requests to users that are offline")
+            case ClientMessageType.FRIEND_REQUEST_ANSWER:
+                assert self.username is not None
+                user, accept = msg
+                if user not in self.pending_requests:
+                    print("WARNING: malicious client: responded to request that never existed.")
+                    return
+                self.pending_requests.remove(user)
+                if accept == "1":
+                    self.permissions_db.update(self.username, user, 0)
+                    self.permissions_db.update(user, self.username, 0)
+                    self.send_user_area(user)
+                    if user in online_users:
+                        online_users[user].send_user_area(self.username)
+            case ClientMessageType.FRIEND_REMOVE:
+                assert self.username is not None
+                user, = msg
+                self.permissions_db.update(self.username, user, -1)
+                self.permissions_db.update(user, self.username, -1)
+            case ClientMessageType.UPDATE_USER_AREA:
+                assert self.username is not None
+                path_json, = msg
+                path = json.loads(path_json)
+                self.spacial_db.insert(self.username, path)
+                for user in online_users:
+                    online_users[user].send_user_area(self.username)
+                print("TODO handle UPDATE_AREA")
             case x:
                 print(f"Message type {x} not handled yet")
 
-    def send_all_user_areas(self):
+    def send_user_area(self, user):
         assert self.username is not None
-        users = self.spacial_db.get_all_users()
-        for user in users:
-            perms = self.permissions_db.get_perm_for_user(self.username)
-            if user in perms:
-                acc = perms[user]
-                self.send(encode_msg(ServerMessageType.UPDATE_USERAREA, [user, serialize_rect(self.spacial_db.get_area(user, acc))]))
+        perms = self.permissions_db.get_perm_for_user(self.username)
+        if user in perms:
+            acc = perms[user]
+            self.send(encode_msg(ServerMessageType.UPDATE_USER_AREA, [user, serialize_rect(self.spacial_db.get_area(user, acc))]))
+        else:
+            print(f"WARNING: tried to send region of user {user} to {self.username} but permissions don't allow")
+
+    def send_all_user_areas_and_accuracies(self):
+        assert self.username is not None
+        perms = self.permissions_db.get_perm_for_user(self.username)
+        for user in perms:
+            acc = perms[user]
+            self.send(encode_msg(ServerMessageType.UPDATE_USER_AREA, [user, serialize_rect(self.spacial_db.get_area(user, acc))]))
+            other_perms = self.permissions_db.get_perm_for_user(user)
+            if self.username in other_perms:
+                other_acc = other_perms[self.username]
+                self.send(encode_msg(ServerMessageType.SET_FRIEND_ACCURACY, [user, str(other_acc)]))
+            else:
+                assert False, f"there is an asymmetrical friend relation. relevant users: {self.username} {user}"
 
     def eof_received(self):
         print("other party closed connection")

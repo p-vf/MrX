@@ -19,7 +19,7 @@ class Client(BaseClient):
 
     # ==== START methods from BaseClient ====
     @override
-    def connect(self, addr, cert_path, connected: threading.Event, end: threading.Event, modelfactory: type[BaseModel]=Model):
+    def connect(self, addr, cert_path, connected: threading.Event, end: threading.Event, modelfactory: type[Model]=Model):
         """
         `connected` is set if the model is initialized and a connection
         has been established.
@@ -109,7 +109,7 @@ class Client(BaseClient):
     @override
     def handle_accuracy(self, friend, depth_level):
         assert self.protocol is not None
-        self.protocol.send(encode_msg(ClientMessageType.SET_ACCURACY, [friend, str(depth_level)]))
+        self.protocol.send(encode_msg(ClientMessageType.UPDATE_FRIEND_ACCURACY, [friend, str(depth_level)]))
 
         print("Work in progress: handle_accuracy")
 
@@ -118,29 +118,30 @@ class Client(BaseClient):
         assert self.protocol is not None
         self.protocol.model.update_map()
         # TODO
-    
+
     @override
-    def handle_add_friend(self, friend):
+    def handle_add_friend(self, friend: str):
         assert self.protocol is not None
-        self.protocol.send(encode_msg(ClientMessageType.ADD_FRIEND, [friend]))
+        self.protocol.send(encode_msg(ClientMessageType.FRIEND_REQUEST, [friend]))
 
         print("Work in progress: handle_add_friend")
 
     @override
-    def handle_remove_friend(self, friend):
+    def handle_remove_friend(self, friend: str):
         assert self.protocol is not None
-        self.protocol.send(encode_msg(ClientMessageType.REMOVE_FRIEND, [friend]))
+        self.protocol.send(encode_msg(ClientMessageType.FRIEND_REMOVE, [friend]))
         self.model.delete_others(friend)
         self.model.remove_friend(friend)
         self.model.update_map()
 
         print("Work in progress: handle_remove_friend")
-    
-    @override
-    def handle_accept_request(self, friend, answer):
-        self.protocol.send(encode_msg(ClientMessageType.ACCEPT_REQUEST, [friend, answer]))
 
-        if answer == AnswerKind.ACCEPTED:
+    @override
+    def handle_accept_request(self, friend: str, answer: AnswerKind):
+        assert self.protocol is not None
+        self.protocol.send(encode_msg(ClientMessageType.FRIEND_REQUEST_ANSWER, [friend, answer]))
+
+        if answer == AnswerKind.ACCEPT:
             self.model.add_friend(friend)
             self.model.insert_other(friend)
             self.model.update_map()
@@ -153,7 +154,7 @@ class Client(BaseClient):
 
 
 class ClientProtocol:
-    def __init__(self, model: BaseModel, closed: threading.Event):
+    def __init__(self, model: Model, closed: threading.Event):
         self.model = model
         self.closed = closed
 
@@ -186,20 +187,23 @@ class ClientProtocol:
             case ServerMessageType.LOGIN_FAILED:
                 print(f"login failed.. reason: {msg}")
             case ServerMessageType.SIGNUP_SUCCESSFUL:
+                username, = msg
                 print(f"successfully signed up!")
+                self.model.set_user(username)
                 self.model.update_location(LocationKind.MAIN)
             case ServerMessageType.SIGNUP_FAILED:
                 print(f"login failed.. reason: {msg}")
-            case ServerMessageType.UPDATE_USERAREA:
+            case ServerMessageType.UPDATE_USER_AREA:
                 self.model.update_user_rect(msg[0], deserialize_rect(msg[1]))
 
+            # TODO update these cases to use the new enum values
             case ServerMessageType.ADD_FRIEND:
-                self.model.insert_others(msg[0])
                 self.model.add_friend(msg[0])
                 self.model.update_map()
 
             case ServerMessageType.REMOVE_FRIEND:
-                self.model.remove_others(msg[0])
+                if msg[0] in self.model.others:
+                    del self.model.others[msg[0]]
                 self.model.delete_friend(msg[0])
                 self.model.update_map()
 
@@ -210,20 +214,12 @@ class ClientProtocol:
 
             case ServerMessageType.REQUEST_RESPONSE:
                 self.model.request_response(msg[0], msg[1])
-                if msg[1] == AnswerKind.ACCEPTED:
+                if msg[1] == AnswerKind.ACCEPT:
                     self.model.insert_others(msg[0])
                     self.model.add_friend(msg[0])
                     self.model.update_map()
 
                 # Else remove pending request?
-
-            case ServerMessageType.SPACIAL_INFO:
-                print(f"SPACIAL INFO: {msg} not handled yet!")
-
-            case ServerMessageType.SPACIAL_PARTITIONING:
-                print(f"SPACIAL PARTITIONING: {msg} not handled yet!")
-
-
 
             case x:
                 print(f"TODO Message type {x} not handled yet")
