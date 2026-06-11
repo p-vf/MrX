@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
 import random
+import numpy as np
+import time
+import threading
 
 class GPSProvider(ABC):
 
@@ -33,6 +36,35 @@ class RandomSwissCityGPS():
       lon + random.uniform(-radius_deg, radius_deg)
     )
 
+class GpsStub():
+  def __init__(self, client):
+    self.client = client
+    self.rng  = np.random.default_rng(4)
+    self.current_location = self.get_location()
+    self.params = (0, 0.05)
+    self.kill_thread = threading.Event()
+  
+  def start_moving(self):
+    t = threading.Thread(target=self.move_loop)
+    t.start()
+  
+  def move_loop(self):
+    while not self.kill_thread.is_set():
+      self.step()
+      self.client.handle_gps(self.current_location)
+      time.sleep(1)
+    
+  def kill(self):
+    self.kill_thread.set()
+
+  def get_location(self):
+    return (46.9480, 7.4474)
+    #return (self.rng.uniform(low=45.8, high= 47.9), self.rng.uniform(low=5.9, high= 10.5))
+
+  def step(self):
+    m, v = self.params
+    delta = (self.rng.normal(m, v), self.rng.normal(m, v))
+    self.current_location = (self.current_location[0] + delta[0], self.current_location[1] + delta[1])
 
 gps = RandomSwissGPS()
 

@@ -106,6 +106,8 @@ class Client(BaseClient):
         # what is gps? needs to become a path: list[int]
         # path = ...
         # self.protocol.send(encode_msg(ClientMessageType.UPDATE_USER_AREA, [path]))
+        path = SpacialStore.location_to_path(gps[0], gps[1], 10)
+        self.protocol.send(encode_msg(ClientMessageType.UPDATE_USER_AREA, path))
 
     @override
     def handle_login(self, username, password):

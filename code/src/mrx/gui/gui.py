@@ -90,7 +90,7 @@ class Gui:
     def check_updates(self):
         try:
             update = self.updates.get(block=False)
-            print(f"UPDATE: {update}")
+            #print(f"UPDATE: {update}")
             match update.kind:
                 case UpdateKind.OFFLINE:
                     self.online = False

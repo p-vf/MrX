@@ -3,6 +3,7 @@ from typing import override
 from gui.enums import AnswerKind, LocationKind
 from logic.geometry import Rect
 from server.spacial_store import SpacialStore
+from communication.gps_provider import GpsStub
 
 from .model import Model
 from gui.types import BaseClient
@@ -17,6 +18,8 @@ class ClientStub(BaseClient):
     def __init__(self):
         self.model = Model(self)
         self.ready = False # wait for pywebview bridge
+        self.gps = GpsStub(self)
+        self.s_store = SpacialStore(Rect(45.6283, 5.8722, 47.6283, 10.8722))
 
     @override
     def connect(self, addr, cert_path, connected, end, modelfactory):
@@ -63,6 +66,8 @@ class ClientStub(BaseClient):
                 self.model.add_friend(user)
             
             self.model.update_map()
+        
+        self.gps.start_moving()
     
     # client made friend request to "friend"
     # currently not adding "friend" : rect to 
@@ -89,6 +94,16 @@ class ClientStub(BaseClient):
     def start_gui(self):
         assert self.model is not None
         self.model.start_gui()
+    
+    def handle_gps(self, gps):
+        path = self.s_store.location_to_path(gps[0], gps[1], 5)
+        rect = self.s_store.path_to_rect(path)
+        print(gps, path, rect)
+        self.model.update_user_rect(self.model.username, rect)
+        self.model.update_map()
+    
+    def kill_gps(self):
+        self.gps.kill()
 
 def main():
     c = ClientStub()
@@ -115,3 +130,4 @@ def main():
     t.join() """
 
     c.start_gui()
+    c.kill_gps()

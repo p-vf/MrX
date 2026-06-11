@@ -50,11 +50,13 @@ class SpacialStore:
         res = []
         cur_rect = self.startrect
         for i in range(depth):
-            for q in range(3):
-                r = get_quadrant(cur_rect, 3)
+            for q in range(4):
+                r = get_quadrant(cur_rect, q)
                 assert r is not None
                 if is_inside(r, x, y):
                     res.append(q)
+                    cur_rect = r
+                    break
         return res
 
     def path_to_rect(self, path):
