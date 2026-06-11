@@ -12,6 +12,7 @@ from communication.protocol import ServerMessageType, ClientMessageType, parse_s
 from logic.geometry import deserialize_rect
 from gui.enums import LocationKind, AnswerKind
 import os
+import json
 
 class Client(BaseClient):
     def __init__(self):
@@ -207,7 +208,17 @@ class ClientProtocol:
                     self.s_store.insert(msg[0], int(msg[1]))
 
                 rect = self.s_store.get_area(msg[0], msg[1]) """
-                self.model.update_user_rect(msg[0], deserialize_rect(msg[1]))
+                path = json.loads(msg[1])
+                if not isinstance(path, list):
+                    return
+                if self.s_store is None:
+                    print("s_store not initialized")
+                    return
+                r = self.s_store.path_to_rect(path)
+                if r is None:
+                    print(f"invalid path from server: {path}")
+                    return
+                self.model.update_user_rect(msg[0], r)
                 self.model.update_map()
             # TODO update these cases to use the new enum values
             case ServerMessageType.FRIEND_REQUEST:

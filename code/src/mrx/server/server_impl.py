@@ -115,7 +115,7 @@ class Server(asyncio.Protocol):
                 user, depth_str = msg
                 depth = int(depth_str)
                 self.permissions_db.update(user, self.username, depth)
-                online_users[user].send(encode_msg(ServerMessageType.UPDATE_USER_AREA, [self.username, serialize_rect(self.spacial_db.get_area(user, depth))]))
+                online_users[user].send_user_area(self.username)
             case ClientMessageType.FRIEND_REQUEST:
                 assert self.username is not None
                 user, = msg
@@ -160,7 +160,7 @@ class Server(asyncio.Protocol):
         perms = self.permissions_db.get_perm_for_user(self.username)
         if user in perms:
             acc = perms[user]
-            self.send(encode_msg(ServerMessageType.UPDATE_USER_AREA, [user, serialize_rect(self.spacial_db.get_area(user, acc))]))
+            self.send(encode_msg(ServerMessageType.UPDATE_USER_AREA, [user, json.dumps(self.spacial_db.get_path(user)[:acc])]))
         else:
             print(f"WARNING: tried to send region of user {user} to {self.username} but permissions don't allow")
 
@@ -168,8 +168,7 @@ class Server(asyncio.Protocol):
         assert self.username is not None
         perms = self.permissions_db.get_perm_for_user(self.username)
         for user in perms:
-            acc = perms[user]
-            self.send(encode_msg(ServerMessageType.UPDATE_USER_AREA, [user, serialize_rect(self.spacial_db.get_area(user, acc))]))
+            self.send_user_area(user)
             other_perms = self.permissions_db.get_perm_for_user(user)
             if self.username in other_perms:
                 other_acc = other_perms[self.username]
