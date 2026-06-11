@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_09190372df8458659a8e6a2072768318 {
+                #map_26042764e8f8ddd9ac5e2c93e8bfd0b0 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -75,52 +75,39 @@
                 return bounds_str;
             }
 
-            async function update_map(user, others) {
-                const user_id = "you";
-                const others_id = others.map(o => o[0]);
+            async function update_map(username, users) {
+                const users_id = users.map(u => u[0]);
                 let overlapping = new Map()
 
-                var bounds = [[user.x_min, user.y_min], [user.x_max, user.y_max]];
-
-                if (!window.markers.has(user_id)) {
-                    let new_user_a = L.rectangle(bounds, {color: "green", weight: 1});
-                    new_user_a.addTo(window.marker_lyr);
-                    window.markers.set(user_id, new_user_a);
-                } else {
-                    let old_user_c = window.markers.get(user_id);
-                    old_user_c.setBounds(bounds)
-                }
-
-                overlapping.set(strFromBounds(bounds), [user_id]);
-
-                for (let i = 0; i < others.length; i++) {
-                    rect = others[i][1]
-                    other_id = others[i][0]
+                for (let i = 0; i < users.length; i++) {
+                    rect = users[i][1]
+                    user_id = users[i][0]
                     var bounds = [[rect.x_min, rect.y_min], [rect.x_max, rect.y_max]];
 
-                    if (!window.markers.has(other_id)) {
-                        let new_user_a = L.rectangle(bounds, {color: "blue", weight: 1});
+                    if (!window.markers.has(user_id)) {
+                        let new_user_a = L.rectangle(bounds, {color: (user_id == username) ? "green" : "blue", weight: 1});
                         new_user_a.addTo(window.marker_lyr);
-                        window.markers.set(other_id, new_user_a);
+                        window.markers.set(user_id, new_user_a);
                     } else {
-                        let old_user_c = window.markers.get(other_id);
+                        let old_user_c = window.markers.get(user_id);
                         old_user_c.setBounds(bounds)
                     }
 
+                    tagname = (user_id == username) ? "you" : user_id
+
                     if (overlapping.has(strFromBounds(bounds))) {
-                        overlapping.get(strFromBounds(bounds)).push(other_id);
+                        if (tagname == "you") {
+                            overlapping.get(strFromBounds(bounds)).push(tagname);
+                        } else {
+                            overlapping.get(strFromBounds(bounds)).unshift(tagname);
+                        }
                     } else {
-                        overlapping.set(strFromBounds(bounds), [other_id])
+                        overlapping.set(strFromBounds(bounds), [tagname])
                     }
                 }
 
-                const keep = new Set([
-                    user_id,
-                    ...others_id
-                ]);
-
                 for (const id of window.markers.keys()) {
-                    if (!keep.has(id)) {
+                    if (!users_id.includes(id)) {
                         window.marker_lyr.removeLayer(window.markers.get(id));
                         window.markers.delete(id);
                     } else {
@@ -131,7 +118,9 @@
                         const bounds = [[sw.lat, sw.lng], [ne.lat, ne.lng]];
                         const names = overlapping.get(strFromBounds(bounds));
 
-                        if (id == names.at(-1)) {
+                        tagname = (id == username) ? "you" : id
+
+                        if (tagname == names.at(-1) ) {
                             names_str = "";
 
                             for (let i = 0; i < names.length; i++) {
@@ -156,14 +145,14 @@
         </script>
         
     
-            <div class="folium-map" id="map_09190372df8458659a8e6a2072768318" ></div>
+            <div class="folium-map" id="map_26042764e8f8ddd9ac5e2c93e8bfd0b0" ></div>
         
 </body>
 <script>
     
     
-            var map_09190372df8458659a8e6a2072768318 = L.map(
-                "map_09190372df8458659a8e6a2072768318",
+            var map_26042764e8f8ddd9ac5e2c93e8bfd0b0 = L.map(
+                "map_26042764e8f8ddd9ac5e2c93e8bfd0b0",
                 {
                     center: [47.3745, 8.5445],
                     crs: L.CRS.EPSG3857,
@@ -180,7 +169,7 @@
 
         
     
-            var tile_layer_b6ea6057503f0c5d940da46a1cb18711 = L.tileLayer(
+            var tile_layer_47b4eb68a3529ec9719e78b197de0e8f = L.tileLayer(
                 "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
                 {
   "minZoom": 0,
@@ -197,7 +186,7 @@
             );
         
     
-            tile_layer_b6ea6057503f0c5d940da46a1cb18711.addTo(map_09190372df8458659a8e6a2072768318);
+            tile_layer_47b4eb68a3529ec9719e78b197de0e8f.addTo(map_26042764e8f8ddd9ac5e2c93e8bfd0b0);
         
 </script>
 </html>

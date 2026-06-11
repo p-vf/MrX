@@ -76,7 +76,7 @@ class ClientStub(BaseClient):
     def handle_remove_friend(self, friend):
         print(f"handling removing friend: {friend}")
         self.model.remove_friend(friend)
-        self.model.delete_others(friend)
+        self.model.delete_user(friend)
         self.model.update_map()
     
     # client wants to accept/reject the friend request from "friend"

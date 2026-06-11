@@ -7,9 +7,7 @@ class Model(BaseModel):
     def __init__(self, client):
         self.location: LocationKind = LocationKind.LOGIN  #location in the gui => login.html etc.
         self.username: str | None = None
-        self.userarea: Rect | None = None #area of the user
-        self.userpath: list[int] | None = None # path down the quad tree
-        self.others: dict[str, Rect] = {} # area of the users friends
+        self.users: dict[str, Rect] = {} # area of the users friends
         self.area_steps: list[int] | None = None # this is for the slider so you can set the accuracy for ur friends
         # [4000m2, 1000m2, 250m2 ... 40m2]
  
@@ -19,18 +17,12 @@ class Model(BaseModel):
     # Needs to be called once to start the gui
     def start_gui(self):
         self.gui.start()
-
-    def get_others(self):
-        return self.others
     
     def set_user(self, username: str):
         self.username = username
     
-    def set_user_path(self, path):
-        self.userpath = path
-    
-    def set_others(self, others):
-        self.others = others
+    def set_users(self, users):
+        self.users = users
     
     # update location in the gui, see enums.py LocationKind
     def update_location(self, location):
@@ -39,21 +31,11 @@ class Model(BaseModel):
     
     # update the area of any user in the gui
     def update_user_rect(self, username, area):
-        print(username, area)
         assert self.username is not None
-        if username == self.username:
-            self.userarea = area
-        else:
-            self.others[username] = area
-        
-        print(self.others)
-        #self.update_map()
+        self.users[username] = area
     
-    def insert_others(self, username, area):
-        self.others[username] = area
-    
-    def delete_others(self, username):
-        del self.others[username]
+    def delete_user(self, username):
+        del self.users[username]
 
     # tell the gui to add a specific friend
     def add_friend(self, friend, accuracy=1):
@@ -73,18 +55,7 @@ class Model(BaseModel):
         self.area_steps = area_steps
         self.updates.put(Change(UpdateKind.UPDATE_SPACIAL, (area_steps,)))
     
-    def update_others(self, username, position=None, accuracy=None):
-        curr_pos, curr_acc = self.others[username]
-
-        if position:
-            curr_pos = position
-        
-        if accuracy:
-            curr_acc = accuracy
-        
-        self.others[username] = (curr_pos, curr_acc)
-    
     # muss aufgerufen werden, damit die karte im gui sich updated
     def update_map(self):
-        print(self.userarea, self.others)
-        self.updates.put(Change(UpdateKind.UPDATE_MAP, (self.userarea, self.others,)))
+        print(self.username, self.users)
+        self.updates.put(Change(UpdateKind.UPDATE_MAP, (self.username, self.users,)))

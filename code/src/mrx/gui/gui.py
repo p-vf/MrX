@@ -121,9 +121,9 @@ class Gui:
         self.window.state.location = location.value
         self.window.evaluate_js(f"update_location()")
 
-    def update_map(self, user: Rect, others: dict[str, Rect]):
-        self.window.state.user_rect = to_json_serializable(user)
-        self.window.state.other_user_rects = [[o, to_json_serializable(others[o])] for o in others]
+    def update_map(self, username: str, users: dict[str, Rect]):
+        self.window.state.username = username
+        self.window.state.user_rects = [[u, to_json_serializable(users[u])] for u in users]
         self.window.evaluate_js("update_map()")
 
     def add_friend(self, friend):
@@ -171,52 +171,39 @@ class Gui:
                 return bounds_str;
             }
 
-            async function update_map(user, others) {
-                const user_id = "you";
-                const others_id = others.map(o => o[0]);
+            async function update_map(username, users) {
+                const users_id = users.map(u => u[0]);
                 let overlapping = new Map()
 
-                var bounds = [[user.x_min, user.y_min], [user.x_max, user.y_max]];
-
-                if (!window.markers.has(user_id)) {
-                    let new_user_a = L.rectangle(bounds, {color: "green", weight: 1});
-                    new_user_a.addTo(window.marker_lyr);
-                    window.markers.set(user_id, new_user_a);
-                } else {
-                    let old_user_c = window.markers.get(user_id);
-                    old_user_c.setBounds(bounds)
-                }
-
-                overlapping.set(strFromBounds(bounds), [user_id]);
-
-                for (let i = 0; i < others.length; i++) {
-                    rect = others[i][1]
-                    other_id = others[i][0]
+                for (let i = 0; i < users.length; i++) {
+                    rect = users[i][1]
+                    user_id = users[i][0]
                     var bounds = [[rect.x_min, rect.y_min], [rect.x_max, rect.y_max]];
 
-                    if (!window.markers.has(other_id)) {
-                        let new_user_a = L.rectangle(bounds, {color: "blue", weight: 1});
+                    if (!window.markers.has(user_id)) {
+                        let new_user_a = L.rectangle(bounds, {color: (user_id == username) ? "green" : "blue", weight: 1});
                         new_user_a.addTo(window.marker_lyr);
-                        window.markers.set(other_id, new_user_a);
+                        window.markers.set(user_id, new_user_a);
                     } else {
-                        let old_user_c = window.markers.get(other_id);
+                        let old_user_c = window.markers.get(user_id);
                         old_user_c.setBounds(bounds)
                     }
 
+                    tagname = (user_id == username) ? "you" : user_id
+
                     if (overlapping.has(strFromBounds(bounds))) {
-                        overlapping.get(strFromBounds(bounds)).push(other_id);
+                        if (tagname == "you") {
+                            overlapping.get(strFromBounds(bounds)).push(tagname);
+                        } else {
+                            overlapping.get(strFromBounds(bounds)).unshift(tagname);
+                        }
                     } else {
-                        overlapping.set(strFromBounds(bounds), [other_id])
+                        overlapping.set(strFromBounds(bounds), [tagname])
                     }
                 }
 
-                const keep = new Set([
-                    user_id,
-                    ...others_id
-                ]);
-
                 for (const id of window.markers.keys()) {
-                    if (!keep.has(id)) {
+                    if (!users_id.includes(id)) {
                         window.marker_lyr.removeLayer(window.markers.get(id));
                         window.markers.delete(id);
                     } else {
@@ -227,7 +214,9 @@ class Gui:
                         const bounds = [[sw.lat, sw.lng], [ne.lat, ne.lng]];
                         const names = overlapping.get(strFromBounds(bounds));
 
-                        if (id == names.at(-1)) {
+                        tagname = (id == username) ? "you" : id
+
+                        if (tagname == names.at(-1) ) {
                             names_str = "";
 
                             for (let i = 0; i < names.length; i++) {

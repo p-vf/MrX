@@ -60,7 +60,7 @@
 
     function update_map() {
         const iframe = document.getElementById("map-frm");
-        iframe.contentWindow.update_map(pywebview.state.user_rect, pywebview.state.other_user_rects)
+        iframe.contentWindow.update_map(pywebview.state.username , pywebview.state.user_rects)
     }
 
     async function add_friend(){
