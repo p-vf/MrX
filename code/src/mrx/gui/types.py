@@ -16,19 +16,11 @@ class BaseModel:
         pass
 
     @abstractmethod
-    def get_user(self) -> list:
-        pass
-
-    @abstractmethod
-    def get_others(self) -> dict:
-        pass
-
-    @abstractmethod
     def set_user(self, user):
         pass
 
     @abstractmethod
-    def set_others(self, others):
+    def set_users(self, others):
         pass
 
     @abstractmethod
@@ -40,15 +32,7 @@ class BaseModel:
         pass
 
     @abstractmethod
-    def insert_others(self, username, position, accuracy):
-        pass
-
-    @abstractmethod
-    def delete_others(self, username):
-        pass
-
-    @abstractmethod
-    def update_others(self, old_un, new_un=None, position=None, accuracy=None):
+    def delete_user(self, username):
         pass
 
     @abstractmethod
@@ -117,3 +101,6 @@ class BaseClient:
     def handle_accept_request(self, friend, answer):
         pass
 
+    @abstractmethod
+    def handle_ready(self):
+        pass
