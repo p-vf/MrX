@@ -115,6 +115,7 @@ class Server(asyncio.Protocol):
                 user, depth_str = msg
                 depth = int(depth_str)
                 self.permissions_db.update(user, self.username, depth)
+                online_users[user].send(encode_msg(ServerMessageType.UPDATE_USER_AREA, [self.username, serialize_rect(self.spacial_db.get_area(user, depth))]))
             case ClientMessageType.FRIEND_REQUEST:
                 assert self.username is not None
                 user, = msg

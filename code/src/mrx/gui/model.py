@@ -39,11 +39,14 @@ class Model(BaseModel):
     
     # update the area of any user in the gui
     def update_user_rect(self, username, area):
+        print(username, area)
         assert self.username is not None
         if username == self.username:
             self.userarea = area
         else:
             self.others[username] = area
+        
+        print(self.others)
         #self.update_map()
     
     def insert_others(self, username, area):
@@ -83,4 +86,5 @@ class Model(BaseModel):
     
     # muss aufgerufen werden, damit die karte im gui sich updated
     def update_map(self):
+        print(self.userarea, self.others)
         self.updates.put(Change(UpdateKind.UPDATE_MAP, (self.userarea, self.others,)))

@@ -149,14 +149,14 @@
             slider.step = 1;
 
             slider.addEventListener('input', e => {
-                acc_value.innerText = pywebview.state.acc_steps[e.target.value];
+                acc_value.innerText = Math.floor(pywebview.state.acc_steps[e.target.value]);
             });
 
             slider.addEventListener('pointerup', e => {
                 change_other_accuracy(friends[i][0], e.target.value);
             });
 
-            acc_value.innerText = pywebview.state.acc_steps[slider.value];
+            acc_value.innerText = Math.floor(pywebview.state.acc_steps[slider.value]);
 
             opt_btn.appendChild(opt_img);
             options.appendChild(remove_btn);

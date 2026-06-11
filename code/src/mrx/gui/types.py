@@ -90,6 +90,10 @@ class BaseClient:
         pass
 
     @abstractmethod
+    def handle_gps(self, gps):
+        pass
+    
+    @abstractmethod
     def handle_login(self, username: str, password: str):
         pass
 

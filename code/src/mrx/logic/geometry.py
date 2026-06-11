@@ -45,6 +45,9 @@ def get_quadrant(r: Rect, quad: int) -> Rect | None:
     return Rect(x_min, y_min, x_max, y_max)
 
 def to_json_serializable(rect: Rect) -> dict:
+    if rect is None:
+        return dict(x_min=46.7533, y_min=9.6222, x_max=46.8783, y_max=9.9347)
+    
     return dict(x_min=rect.x_min, y_min=rect.y_min, x_max=rect.x_max, y_max=rect.y_max)
 
 def serialize_rect(rect: Rect) -> str:

@@ -97,6 +97,13 @@ class Client(BaseClient):
                 self._model.update_location(location)
             case x:
                 print(f"TODO implement handle_location case {x}")
+    
+    @override
+    def handle_gps(self, gps):
+        print("needs to be implemented")
+        # what is gps? needs to become a path: list[int]
+        # path = ...
+        # self.protocol.send(encode_msg(ClientMessageType.UPDATE_USER_AREA, [path]))
 
     @override
     def handle_login(self, username, password):
@@ -109,34 +116,22 @@ class Client(BaseClient):
         self.protocol.send(encode_msg(ClientMessageType.SIGNUP, [username, password]))
 
     @override
-    def handle_accuracy(self, friend, depth_level):
+    def handle_others_accuracy(self, friend, depth_level):
         assert self.protocol is not None
         self.protocol.send(encode_msg(ClientMessageType.UPDATE_FRIEND_ACCURACY, [friend, str(depth_level)]))
-
-        print("Work in progress: handle_accuracy")
-
-    @override
-    def handle_init_map(self):
-        assert self.protocol is not None
-        self.protocol.model.update_map()
-        # TODO
 
     @override
     def handle_add_friend(self, friend: str):
         assert self.protocol is not None
         self.protocol.send(encode_msg(ClientMessageType.FRIEND_REQUEST, [friend]))
 
-        print("Work in progress: handle_add_friend")
-
     @override
     def handle_remove_friend(self, friend: str):
         assert self.protocol is not None
         self.protocol.send(encode_msg(ClientMessageType.FRIEND_REMOVE, [friend]))
-        self.model.delete_others(friend)
-        self.model.remove_friend(friend)
-        self.model.update_map()
-
-        print("Work in progress: handle_remove_friend")
+        self._model.delete_others(friend)
+        self._model.remove_friend(friend)
+        self._model.update_map()
 
     @override
     def handle_accept_request(self, friend: str, answer: AnswerKind):
@@ -144,11 +139,13 @@ class Client(BaseClient):
         self.protocol.send(encode_msg(ClientMessageType.FRIEND_REQUEST_ANSWER, [friend, answer]))
 
         if answer == AnswerKind.ACCEPT:
-            self.model.add_friend(friend)
-            self.model.insert_other(friend)
-            self.model.update_map()
-        print("Work in progress handle_accept_friend")
-    # ==== END methods from BaseClient ====
+            self._model.add_friend(friend)
+            self._model.insert_others(friend)
+            self._model.update_map()
+    
+    @override
+    def handle_ready(self):
+        self.protocol.bridge_ready.set()
 
     def start_gui(self):
         assert self._model is not None
@@ -159,6 +156,8 @@ class ClientProtocol:
     def __init__(self, model: Model, closed: threading.Event):
         self.model = model
         self.closed = closed
+        self.bridge_ready = threading.Event()
+        self.s_store: SpacialStore | None = None
 
     # ==== START methods from asyncio.Protocol ====
     def connection_made(self, transport: socket.socket):
@@ -184,47 +183,44 @@ class ClientProtocol:
             case ServerMessageType.LOGIN_SUCCESSFUL | ServerMessageType.SIGNUP_SUCCESSFUL:
                 username, spacial_kind, spacial_rect = msg
                 startrect = deserialize_rect(spacial_rect)
-                s = SpacialStore(startrect)
-                accuracies = s.get_accuracy_per_depth(20)
-                # TODO (p-vf) do something with those accuracies (update sliders)
+                self.s_store = SpacialStore(startrect)
+                accuracies = self.s_store.get_accuracy_per_depth(20)
+
                 if msg_type == ServerMessageType.LOGIN_SUCCESSFUL:
                     print(f"successfully logged in!")
                 else:
                     print(f"successfully signed up!")
+
                 self.model.set_user(username)
                 self.model.update_location(LocationKind.MAIN)
+                # (alex) client needs to wait until pywebview bridge is ready
+                self.bridge_ready.wait()
+                self.model.update_spacial(accuracies)
             case ServerMessageType.LOGIN_FAILED:
                 print(f"login failed.. reason: {msg}")
             case ServerMessageType.SIGNUP_FAILED:
                 print(f"login failed.. reason: {msg}")
             case ServerMessageType.UPDATE_USER_AREA:
+                # Maybe ts can be used to get the rect from the path
+                # Path is not being sent yet
+                """ if msg[0] not in self.s_store.get_all_usernames():
+                    self.s_store.insert(msg[0], int(msg[1]))
+
+                rect = self.s_store.get_area(msg[0], msg[1]) """
                 self.model.update_user_rect(msg[0], deserialize_rect(msg[1]))
-
+                self.model.update_map()
             # TODO update these cases to use the new enum values
-            case ServerMessageType.ADD_FRIEND:
-                self.model.add_friend(msg[0])
-                self.model.update_map()
-
-            case ServerMessageType.REMOVE_FRIEND:
-                if msg[0] in self.model.others:
-                    del self.model.others[msg[0]]
-                self.model.delete_friend(msg[0])
-                self.model.update_map()
-
-            case ServerMessageType.REQUEST_RECEIVED:
-                self.model.request_recieved(msg[0])
-
-                # implement self.model.update_requests()?
-
-            case ServerMessageType.REQUEST_RESPONSE:
-                self.model.request_response(msg[0], msg[1])
-                if msg[1] == AnswerKind.ACCEPT:
-                    self.model.insert_others(msg[0])
-                    self.model.add_friend(msg[0])
-                    self.model.update_map()
-
-                # Else remove pending request?
-
+            case ServerMessageType.FRIEND_REQUEST:
+                self.model.request_received(msg[0])
+            case ServerMessageType.FRIEND_REQUEST_ANSWER:
+                # This is unnessecary becuase we have SET_FRIEND_ACCURACY.
+                # If a request gets rejected we dont handle it anyways.
+                """ if msg[1] == AnswerKind.ACCEPT:
+                    self.model.add_friend(msg[0]) """
+            case ServerMessageType.FRIEND_REMOVE:
+                self.model.remove_friend(msg[0])
+            case ServerMessageType.SET_FRIEND_ACCURACY:
+                self.model.add_friend(msg[0], msg[1])
             case x:
                 print(f"TODO Message type {x} not handled yet")
 
