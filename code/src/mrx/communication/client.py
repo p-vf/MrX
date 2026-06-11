@@ -68,6 +68,7 @@ class Client(BaseClient):
                                     if not data:
                                         print("Data Ended. Closing connection")
                                         self.protocol.eof_received()
+                                        end.set()
                                 if not data or end.is_set():
                                     break
                                 self.protocol.data_received(data)

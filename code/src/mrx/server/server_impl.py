@@ -20,7 +20,10 @@ from communication.keygen import generate_key, get_or_generate_cert
 
 def main() -> None:
     print(f"PID: {os.getpid()}")
-    asyncio.run(start_server())
+    try:
+        asyncio.run(start_server())
+    except KeyboardInterrupt:
+        print("Bye!")
     # # use socket.gethostname() instead of "localhost" if used for real
     # host = "localhost"
     # port = 8443
@@ -39,8 +42,6 @@ spacialstore.insert("chud", [2, 3, 1, 0, 0, 0])
 
 create_perm_db(Path("user.db"))
 permissionstore = PermissionDBManager(Path("user.db"))
-permissionstore.update("chad", "chud", 4)
-permissionstore.update("chud", "chad", 2)
 permissionstore.load_perms()
 
 online_users: dict[str, "Server"] = dict()
@@ -107,6 +108,7 @@ class Server(asyncio.Protocol):
                     self.send(encode_msg(ServerMessageType.SIGNUP_FAILED, ["db error"]))
                     print(f"db error: {err}")
                     return
+                self.username = username
                 self.send(encode_msg(ServerMessageType.SIGNUP_SUCCESSFUL, [username, str(1), serialize_rect(self.spacial_db.startrect)]))
                 self.send_all_user_areas_and_accuracies()
                 # TODO change the state of this connection (user is now logged in or smthn)
@@ -115,7 +117,8 @@ class Server(asyncio.Protocol):
                 user, depth_str = msg
                 depth = int(depth_str)
                 self.permissions_db.update(user, self.username, depth)
-                online_users[user].send_user_area(self.username)
+                if user in online_users:
+                    online_users[user].send_user_area(self.username)
             case ClientMessageType.FRIEND_REQUEST:
                 assert self.username is not None
                 user, = msg
@@ -163,6 +166,7 @@ class Server(asyncio.Protocol):
             self.send(encode_msg(ServerMessageType.UPDATE_USER_AREA, [user, json.dumps(self.spacial_db.get_path(user)[:acc])]))
         else:
             print(f"WARNING: tried to send region of user {user} to {self.username} but permissions don't allow")
+            print(f"PERMISSIONS: {perms}")
 
     def send_all_user_areas_and_accuracies(self):
         assert self.username is not None
