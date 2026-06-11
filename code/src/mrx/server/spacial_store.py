@@ -1,4 +1,4 @@
-from logic.geometry import get_quadrant, Rect
+from logic.geometry import get_quadrant, Rect, is_inside
 from math import sin, pi
 
 class SpacialStore:
@@ -46,6 +46,26 @@ class SpacialStore:
             curr_area *= 0.25
         return accuracy_list
 
+    def location_to_path(self, x, y, depth):
+        res = []
+        cur_rect = self.startrect
+        for i in range(depth):
+            for q in range(3):
+                r = get_quadrant(cur_rect, 3)
+                assert r is not None
+                if is_inside(r, x, y):
+                    res.append(q)
+        return res
+
+    def path_to_rect(self, path):
+        """returns None if there was an invalid quadrant in the path"""
+        cur_rect = self.startrect
+        for q in path:
+            cur_rect = get_quadrant(cur_rect, q)
+            if cur_rect is None:
+                return None
+        return cur_rect
+
     def get_area(self, user_id: str, accuracy: int = -1) -> Rect:
         """
         an accuracy of 0 means the lowest possible accuracy (the start rect is returned).
@@ -54,9 +74,7 @@ class SpacialStore:
         """
         if accuracy < 0:
             return self.startrect
-        curr_rect = self.startrect
         path = self._user_path[user_id][:accuracy]
-        for choice in path:
-            curr_rect = get_quadrant(curr_rect, choice)
-            assert curr_rect is not None
-        return curr_rect
+        res = self.path_to_rect(path)
+        assert res is not None
+        return res
