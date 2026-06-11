@@ -13,12 +13,14 @@ from logic.geometry import deserialize_rect
 from gui.enums import LocationKind, AnswerKind
 import os
 import json
+from communication.gps_provider import GpsStub
 
 class Client(BaseClient):
     def __init__(self):
         self.protocol = None
         self.sel = selectors.DefaultSelector()
         self._model = None
+        self.gps = GpsStub(self)
 
     # ==== START methods from BaseClient ====
     @override
@@ -102,12 +104,11 @@ class Client(BaseClient):
     
     @override
     def handle_gps(self, gps):
-        print("needs to be implemented")
-        # what is gps? needs to become a path: list[int]
-        # path = ...
-        # self.protocol.send(encode_msg(ClientMessageType.UPDATE_USER_AREA, [path]))
-        path = SpacialStore.location_to_path(gps[0], gps[1], 10)
-        self.protocol.send(encode_msg(ClientMessageType.UPDATE_USER_AREA, path))
+        path = self.protocol.s_store.location_to_path(gps[0], gps[1], 10)
+        json_path = json.dumps(path)
+        self.protocol.send(encode_msg(ClientMessageType.UPDATE_USER_AREA, [json_path]))
+        self._model.update_user_rect(self._model.username, self.protocol.s_store.path_to_rect(path))
+        self._model.update_map()
 
     @override
     def handle_login(self, username, password):
@@ -150,10 +151,14 @@ class Client(BaseClient):
     @override
     def handle_ready(self):
         self.protocol.bridge_ready.set()
+        self.gps.start_moving()
 
     def start_gui(self):
         assert self._model is not None
         self._model.start_gui()
+    
+    def kill_gps(self):
+        self.gps.kill()
 
 
 class ClientProtocol:
@@ -177,7 +182,7 @@ class ClientProtocol:
 
     def data_received(self, data: bytes):
         # TODO parse data so that arbitrary splits in the stream are handled correctly
-        print("received: ", data)
+        #print("received: ", data)
         unparsed_msg = data
         (msg_type, msg), err = parse_server_msg(unparsed_msg)
         if err:
@@ -188,7 +193,7 @@ class ClientProtocol:
                 username, spacial_kind, spacial_rect = msg
                 startrect = deserialize_rect(spacial_rect)
                 self.s_store = SpacialStore(startrect)
-                accuracies = self.s_store.get_accuracy_per_depth(20)
+                accuracies = self.s_store.get_accuracy_per_depth(10)
 
                 if msg_type == ServerMessageType.LOGIN_SUCCESSFUL:
                     print(f"successfully logged in!")
@@ -275,3 +280,4 @@ def main():
     end.set()
     print(threading.enumerate())
     t.join()
+    c.kill_gps()

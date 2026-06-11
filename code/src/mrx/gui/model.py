@@ -57,5 +57,5 @@ class Model(BaseModel):
     
     # muss aufgerufen werden, damit die karte im gui sich updated
     def update_map(self):
-        print(self.username, self.users)
+        #(self.username, self.users)
         self.updates.put(Change(UpdateKind.UPDATE_MAP, (self.username, self.users,)))

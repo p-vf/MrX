@@ -56,7 +56,7 @@ class Gui:
     def check_changes(self):
         try:
             change = self.changes.get(block=False)
-            print(f"CHANGE: {change}")
+            #print(f"CHANGE: {change}")
             match change.kind:
                 case ChangeKind.LOCATION_UPDATE:
                     assert len(change.attrs) == 1

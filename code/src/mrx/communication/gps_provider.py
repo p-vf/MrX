@@ -41,7 +41,7 @@ class GpsStub():
     self.client = client
     self.rng  = np.random.default_rng(4)
     self.current_location = self.get_location()
-    self.params = (0, 0.05)
+    self.params = (0, 0.01)
     self.kill_thread = threading.Event()
   
   def start_moving(self):
@@ -52,14 +52,13 @@ class GpsStub():
     while not self.kill_thread.is_set():
       self.step()
       self.client.handle_gps(self.current_location)
-      time.sleep(1)
+      time.sleep(0.1)
     
   def kill(self):
     self.kill_thread.set()
 
   def get_location(self):
-    return (46.9480, 7.4474)
-    #return (self.rng.uniform(low=45.8, high= 47.9), self.rng.uniform(low=5.9, high= 10.5))
+    return (self.rng.uniform(low=46.2, high= 47.2), self.rng.uniform(low=7.2, high= 8.2))
 
   def step(self):
     m, v = self.params
