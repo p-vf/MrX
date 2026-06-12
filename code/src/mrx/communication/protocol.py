@@ -51,7 +51,7 @@ def parse_msg[T: enum.Enum](msg: bytes, enumtype: type[T]) -> tuple[tuple[T | No
     if data != b"":
         for field in data.split(b" "):
             fields.append(base64.b64decode(field).decode())
-    print(f"received and parsed message: {msg_type_parsed}, {fields}")
+    #print(f"received and parsed message: {msg_type_parsed}, {fields}")
     return (msg_type_parsed, fields), err
 
 def parse_server_msg(msg: bytes) -> tuple[tuple[ServerMessageType | None, list[str]], str]:

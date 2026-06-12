@@ -72,7 +72,7 @@ class Server(asyncio.Protocol):
 
     def data_received(self, data: bytes):
         # TODO parse data correctly so that arbitrary splits in the stream are handled
-        print(f"received: {data} from {self.peername}")
+        #print(f"received: {data} from {self.peername}")
         unparsed_msg = data
         (msg_type, msg), err = parse_client_msg(unparsed_msg)
         if err:
@@ -154,7 +154,7 @@ class Server(asyncio.Protocol):
                 self.spacial_db.insert(self.username, path)
                 for user in online_users:
                     online_users[user].send_user_area(self.username)
-                print("TODO handle UPDATE_AREA")
+                #print("TODO handle UPDATE_AREA")
             case x:
                 print(f"Message type {x} not handled yet")
 

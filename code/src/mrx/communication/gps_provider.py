@@ -39,10 +39,13 @@ class RandomSwissCityGPS():
 class GpsStub():
   def __init__(self, client):
     self.client = client
-    self.rng  = np.random.default_rng(4)
-    self.current_location = self.get_location()
+    self.rng  = np.random.default_rng()
     self.params = (0, 0.01)
+    self.current_location = self.get_location()
+    self.new_location = self.get_location()
     self.kill_thread = threading.Event()
+    self.next_steps = []
+    self.next_time = []
   
   def start_moving(self):
     t = threading.Thread(target=self.move_loop)
@@ -50,9 +53,39 @@ class GpsStub():
   
   def move_loop(self):
     while not self.kill_thread.is_set():
-      self.step()
-      self.client.handle_gps(self.current_location)
-      time.sleep(0.1)
+      if len(self.next_steps) == 0:
+        self.current_location = self.new_location
+        time.sleep(1)
+        self.find_next_steps()
+        
+      self.client.handle_gps(self.next_steps.pop(0))
+      time.sleep(self.next_time.pop(0))
+
+  def find_next_steps(self):
+    self.new_location = self.get_location()
+
+    ox, oy = self.current_location
+    nx, ny = self.new_location
+
+    x_dist = nx-ox
+    y_dist = ny-oy
+    abs_dist = np.abs(x_dist)
+
+    steps = (int)(np.ceil(abs_dist/0.015))
+
+    x_lin = np.linspace(0,x_dist,steps)
+    y_lin = np.linspace(0,y_dist,steps)
+
+    self.next_steps = [((ox + dx), (oy + dy)) for dx, dy in zip(x_lin, y_lin)]
+
+    t_lin = np.linspace(0,abs_dist,steps)
+    mid = abs_dist/2
+    wait_time = 1 - (0.95*(steps/(1+steps)))
+    
+    self.next_time = [float(self.strech(x, mid, wait_time)) for x in t_lin]
+
+  def strech(self, value, mid, shortest_wait):
+    return (1/(mid*mid + shortest_wait)) * (value-mid) * (value-mid) + shortest_wait
     
   def kill(self):
     self.kill_thread.set()
@@ -60,14 +93,8 @@ class GpsStub():
   def get_location(self):
     return (self.rng.uniform(low=46.2, high= 47.2), self.rng.uniform(low=7.2, high= 8.2))
 
-  def step(self):
-    m, v = self.params
-    delta = (self.rng.normal(m, v), self.rng.normal(m, v))
-    self.current_location = (self.current_location[0] + delta[0], self.current_location[1] + delta[1])
-
-gps = RandomSwissGPS()
-
-citygps = RandomSwissCityGPS()
-
-print(f" Your stubbed gps location: {gps.get_location()}")
-print(f" GPS location near a city: {citygps.get_location_near_city(0.02)}")
+if __name__ == "__main__":
+  gps = GpsStub(None)
+  gps.start_moving()
+  time.sleep(1)
+  gps.kill()

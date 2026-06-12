@@ -96,9 +96,8 @@ class ClientStub(BaseClient):
         self.model.start_gui()
     
     def handle_gps(self, gps):
-        path = self.s_store.location_to_path(gps[0], gps[1], 5)
+        path = self.s_store.location_to_path(gps[0], gps[1], 10)
         rect = self.s_store.path_to_rect(path)
-        print(gps, path, rect)
         self.model.update_user_rect(self.model.username, rect)
         self.model.update_map()
     
