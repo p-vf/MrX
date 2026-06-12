@@ -80,7 +80,7 @@ class GpsStub():
 
     t_lin = np.linspace(0,abs_dist,steps)
     mid = abs_dist/2
-    wait_time = 1 - (0.95*(steps/(1+steps)))
+    wait_time = 1 - (0.8*(steps/(1+steps)))
     
     self.next_time = [float(self.strech(x, mid, wait_time)) for x in t_lin]
 

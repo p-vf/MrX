@@ -105,7 +105,7 @@ class Client(BaseClient):
     
     @override
     def handle_gps(self, gps):
-        path = self.protocol.s_store.location_to_path(gps[0], gps[1], 10)
+        path = self.protocol.s_store.location_to_path(gps[0], gps[1], 9)
         json_path = json.dumps(path)
         self.protocol.send(encode_msg(ClientMessageType.UPDATE_USER_AREA, [json_path]))
         self._model.update_user_rect(self._model.username, self.protocol.s_store.path_to_rect(path))
@@ -189,7 +189,7 @@ class ClientProtocol:
                 username, spacial_kind, spacial_rect = msg
                 startrect = deserialize_rect(spacial_rect)
                 self.s_store = SpacialStore(startrect)
-                accuracies = self.s_store.get_accuracy_per_depth(10)
+                accuracies = self.s_store.get_accuracy_per_depth(9)
 
                 if msg_type == ServerMessageType.LOGIN_SUCCESSFUL:
                     print(f"successfully logged in!")
@@ -202,9 +202,9 @@ class ClientProtocol:
                 self.bridge_ready.wait()
                 self.model.update_spacial(accuracies)
             case ServerMessageType.LOGIN_FAILED:
-                print(f"login failed.. reason: {msg}")
+                self.model.login_failed(msg[0])
             case ServerMessageType.SIGNUP_FAILED:
-                print(f"login failed.. reason: {msg}")
+                self.model.login_failed(msg[0])
             case ServerMessageType.UPDATE_USER_AREA:
                 # Maybe ts can be used to get the rect from the path
                 # Path is not being sent yet

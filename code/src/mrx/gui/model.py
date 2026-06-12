@@ -59,3 +59,6 @@ class Model(BaseModel):
     def update_map(self):
         #(self.username, self.users)
         self.updates.put(Change(UpdateKind.UPDATE_MAP, (self.username, self.users,)))
+    
+    def login_failed(self, error_msg):
+        self.updates.put(Change(UpdateKind.LOGIN_FAILED, (error_msg,)))

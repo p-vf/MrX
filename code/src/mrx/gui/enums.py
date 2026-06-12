@@ -22,6 +22,7 @@ class UpdateKind(Enum):
     REQUEST_RECEIVED = 4
     UPDATE_SPACIAL = 5
     UPDATE_ACCURACY = 6
+    LOGIN_FAILED = 7
 
 @unique
 class AnswerKind(Enum):

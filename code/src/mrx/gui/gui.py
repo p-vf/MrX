@@ -113,6 +113,9 @@ class Gui:
                 case UpdateKind.UPDATE_SPACIAL:
                     assert len(update.attrs) == 1
                     self.update_spacial(*update.attrs)
+                case UpdateKind.LOGIN_FAILED:
+                    assert len(update.attrs) == 1
+                    self.login_failed(*update.attrs)
                 case x:
                     assert False, f"unreachable: {x} not handled"
         except queue.Empty:
@@ -142,6 +145,10 @@ class Gui:
 
     def update_spacial(self, area_steps):
         self.window.state.acc_steps = area_steps
+    
+    def login_failed(self, error_msg):
+        self.window.state.login_error = error_msg
+        self.window.evaluate_js("login_failed()")
 
     def generate_map(self, location, zoom):
         map = folium.Map(

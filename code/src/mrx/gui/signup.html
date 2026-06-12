@@ -55,6 +55,11 @@
         await window.pywebview.api.update_client_signup(username, password);
     }
 
+    function login_failed() {
+        const msg = pywebview.state.login_error;
+        alert(msg);
+    }
+
     function update_location() {
         let path = "";
         const location = pywebview.state.location;
