@@ -11,8 +11,8 @@ from datetime import datetime, timedelta
 from communication.protocol import ClientMessageType, ServerMessageType, parse_client_msg, encode_msg
 from database.create_user_db import create_user_db
 from database.user_db import UserDBManager
-from server.spacial_db import SpacialDBManager, create_spacial_db
-from server.permission_db import PermissionDBManager, create_perm_db
+from server.spacial_store import SpacialStore
+from server.permission_db import PermissionDBManager, create_perm_db, PermissionStore
 from server.pending_request_db import PendingRequestDBManager, create_pending_request_db
 from logic.geometry import serialize_rect, Rect
 from collections import deque
@@ -37,27 +37,10 @@ def main() -> None:
     # s = ServerOld("localhost", 8443, Path("keys"))
     # s.start()
 
-# example region: rect that bounds Switzerland
-# TODO store these locations
-
-create_spacial_db(Path("user.db"))
-spacialstore = SpacialDBManager(Rect(45.6283, 5.8722, 47.6283, 10.8722), Path("user.db"))
-spacialstore.load_spacial_data()
-spacialstore.insert("chad", [2, 3, 3, 0, 0, 0])
-spacialstore.insert("chud", [2, 3, 1, 0, 0, 0])
-
-create_perm_db(Path("user.db"))
-permissionstore = PermissionDBManager(Path("user.db"))
-permissionstore.load_perms()
-print("PERMISSIONS:")
-pprint.pprint(permissionstore._perms)
-print("INVERSE PERMISSIONS:")
-pprint.pprint(permissionstore._inv_perms)
-
 online_users: dict[str, "Server"] = dict()
 
 class Server(asyncio.Protocol):
-    def __init__(self, db_manager: UserDBManager):
+    def __init__(self, db_manager: UserDBManager, spacialstore: SpacialStore, permissionstore: PermissionStore):
         self.peername = None
         self.username = None
         self.db_manager = db_manager
@@ -75,6 +58,8 @@ class Server(asyncio.Protocol):
         self.transport = transport
 
     def connection_lost(self, exc):
+        if self.username is not None:
+            self.remove_self_online_users()
         if exc is None:
             print("connection closed because of EOF being reached or because this side closed it")
         else:
@@ -215,7 +200,8 @@ class Server(asyncio.Protocol):
             self.send(encode_msg(ServerMessageType.UPDATE_USER_AREA, [user, json.dumps(self.spacial_db.get_path(user))]))
         elif user in perms:
             acc = perms[user]
-            self.send(encode_msg(ServerMessageType.UPDATE_USER_AREA, [user, json.dumps(self.spacial_db.get_path(user)[:acc])]))
+            if self.spacial_db.has_user(user):
+                self.send(encode_msg(ServerMessageType.UPDATE_USER_AREA, [user, json.dumps(self.spacial_db.get_path(user)[:acc])]))
         else:
             print(f"WARNING: tried to send region of user {user} to {self.username} but permissions don't allow")
             print(f"PERMISSIONS: {perms}")
@@ -250,6 +236,7 @@ class Server(asyncio.Protocol):
         """cleans up online_users after a connection loss. should only be called if `self.username` is not None."""
         if self.username in online_users:
             del online_users[self.username]
+            self.spacial_db.remove_user(self.username)
         else:
             print(f"WARNING: remove_self_online_users: username {self.username} not in online_users")
             print(f"online_users: {online_users}")
@@ -257,6 +244,13 @@ class Server(asyncio.Protocol):
 userdatabase_path = Path("serverdata") / "users.db"
 async def start_server():
     os.makedirs(userdatabase_path.parent, exist_ok = True)
+
+    spacialstore = SpacialStore(Rect(45.6283, 5.8722, 47.6283, 10.8722))
+
+    create_perm_db(userdatabase_path)
+    permissionstore = PermissionDBManager(userdatabase_path)
+    permissionstore.load_perms()
+
     create_user_db(userdatabase_path)
     manager = UserDBManager(userdatabase_path)
     print("created user database")
@@ -273,7 +267,7 @@ async def start_server():
         raise e
 
     server = await loop.create_server(
-        lambda: Server(manager),
+        lambda: Server(manager, spacialstore, permissionstore),
         'localhost', 8443
         , ssl=context
         )

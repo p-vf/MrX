@@ -21,6 +21,12 @@ class SpacialStore:
     def get_user_paths(self) -> dict[str, list[int]]:
         return self._user_path
 
+    def has_user(self, user_id: str) -> bool:
+        return user_id in self._user_path
+
+    def remove_user(self, user_id: str):
+        del self._user_path[user_id]
+
     def get_path(self, user_id: str) -> list[int]:
         return self._user_path[user_id]
 
