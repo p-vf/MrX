@@ -29,6 +29,7 @@ class Gui:
             "MrX",
             path,
             js_api = self.api,
+            maximized=True,
         )
         if w is None:
             raise Exception("Window could not be created")
@@ -36,7 +37,7 @@ class Gui:
 
         self.window.state.requests = []
         self.window.events.closed += self.on_closed
-        self.generate_map([47.3745, 8.5445], 5)
+        self.generate_map([46.6283, 8.3722], 8)
 
     def get_update_queue(self):
         return self.updates
