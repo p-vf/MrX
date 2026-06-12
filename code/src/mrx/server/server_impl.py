@@ -174,11 +174,14 @@ class Server(asyncio.Protocol):
                     self.send_user_accuracy(user)
                     if user in online_users:
                         online_users[user].send_user_area(self.username)
+                        online_users[user].send_user_accuracy(self.username)
             case ClientMessageType.FRIEND_REMOVE:
                 assert self.username is not None
                 user, = msg
                 self.permissions_db.update(self.username, user, -1)
                 self.permissions_db.update(user, self.username, -1)
+                if user in online_users:
+                    online_users[user].send(encode_msg(ServerMessageType.FRIEND_REMOVE, [self.username]))
             case ClientMessageType.UPDATE_USER_AREA:
                 assert self.username is not None
                 path_json, = msg

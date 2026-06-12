@@ -133,20 +133,15 @@ class Client(BaseClient):
     @override
     def handle_remove_friend(self, friend: str):
         assert self.protocol is not None
-        self.protocol.send(encode_msg(ClientMessageType.FRIEND_REMOVE, [friend]))
-        self._model.delete_others(friend)
+        self._model.delete_user(friend)
         self._model.remove_friend(friend)
         self._model.update_map()
+        self.protocol.send(encode_msg(ClientMessageType.FRIEND_REMOVE, [friend]))
 
     @override
     def handle_accept_request(self, friend: str, answer: AnswerKind):
         assert self.protocol is not None
         self.protocol.send(encode_msg(ClientMessageType.FRIEND_REQUEST_ANSWER, [friend, str(answer.value)]))
-
-        if answer == AnswerKind.ACCEPT:
-            self._model.add_friend(friend)
-            self._model.insert_others(friend)
-            self._model.update_map()
     
     @override
     def handle_ready(self):
@@ -237,7 +232,9 @@ class ClientProtocol:
                 """ if msg[1] == AnswerKind.ACCEPT:
                     self.model.add_friend(msg[0]) """
             case ServerMessageType.FRIEND_REMOVE:
+                self.model.delete_user(msg[0])
                 self.model.remove_friend(msg[0])
+                self.model.update_map()
             case ServerMessageType.SET_FRIEND_ACCURACY:
                 self.model.add_friend(msg[0], msg[1])
             case x:
