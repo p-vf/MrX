@@ -16,7 +16,7 @@ from server.permission_db import PermissionDBManager, create_perm_db, Permission
 from server.pending_request_db import PendingRequestDBManager, create_pending_request_db
 from logic.geometry import serialize_rect, Rect
 from collections import deque
-import pprint
+import argparse
 
 from communication.keygen import get_or_generate_cert
 
@@ -24,10 +24,26 @@ LOGIN_FAIL_TIMEOUT_SEC = 10
 MESSAGE_TIME_WINDOW_SIZE = 20
 MAX_MESSAGES_PER_SEC = 15
 
+import socket
+def get_ip_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    return s.getsockname()[0]
+
 def main() -> None:
     print(f"PID: {os.getpid()}")
+    a = argparse.ArgumentParser("server")
+    a.add_argument("--localhost", help="if given, server is run on localhost only. otherwise the hostname of the device is used", action=argparse.BooleanOptionalAction, default=False)
+    a.add_argument("--port", help="set port to run the server on. default: 8443", type=int, default=8443)
+    res = a.parse_args()
+    localhost = res.localhost
+    port = res.port
+    host = "localhost"
+    if not localhost:
+        host = get_ip_address()  # '192.168.0.110'
+        print(host)
     try:
-        asyncio.run(start_server())
+        asyncio.run(start_server((host, port)))
     except KeyboardInterrupt:
         print("Bye!")
     # # use socket.gethostname() instead of "localhost" if used for real
@@ -242,7 +258,8 @@ class Server(asyncio.Protocol):
             print(f"online_users: {online_users}")
 
 userdatabase_path = Path("serverdata") / "users.db"
-async def start_server():
+async def start_server(addr: tuple[str, int]):
+    host, port = addr
     os.makedirs(userdatabase_path.parent, exist_ok = True)
 
     spacialstore = SpacialStore(Rect(45.6283, 5.8722, 47.6283, 10.8722))
@@ -257,18 +274,19 @@ async def start_server():
     loop = asyncio.get_running_loop()
 
     keydir = Path("keys")
-    cert = get_or_generate_cert(keydir)
+    cert = get_or_generate_cert(keydir, host=host)
     print(cert)
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     try:
-        context.load_cert_chain(keydir/"localhost.crt", keydir/"localhost.key")
+        context.load_cert_chain(keydir/(host + ".crt"), keydir/(host + ".key"))
     except FileNotFoundError as e:
-        print(f"files: {keydir/"localhost.crt"}, {keydir/"localhost.key"}")
+        print(f"files: {keydir/(host + ".crt")}, {keydir/(host + ".key")}")
         raise e
 
+    print("server starting on address:", addr)
     server = await loop.create_server(
         lambda: Server(manager, spacialstore, permissionstore),
-        'localhost', 8443
+        host, port
         , ssl=context
         )
 

@@ -14,6 +14,7 @@ from gui.enums import LocationKind, AnswerKind
 import os
 import json
 from communication.gps_provider import GpsStub
+import argparse
 
 class Client(BaseClient):
     def __init__(self):
@@ -252,20 +253,22 @@ class ClientProtocol:
             raise RuntimeError("socket connection broken")
 
 def main():
+    a = argparse.ArgumentParser("client")
+    a.add_argument("--host", help="set the host that the server runs on. default: localhost", default="localhost")
+    a.add_argument("--port", help="set the port the server uses. default: 8443", type=int, default=8443)
+    args = a.parse_args()
+    host = args.host
+    port = args.port
+    assert isinstance(port, int)
     c = Client()
     print(f"PID: {os.getpid()}")
 
-    user = ["alex", [47.3745, 8.5445], 200]
-    others = {
-            "pascal" : ([47.373, 8.545], 300),
-            "max" : ([47.379, 8.54], 100)
-        }
 
     connected = threading.Event()
     end = threading.Event()
     def run_client():
         nonlocal connected, end, c
-        c.connect(("localhost", 8443), Path("keys")/"localhost.crt", connected, end, Model)
+        c.connect((host, port), Path("keys")/f"{host}.crt", connected, end, Model)
     t = threading.Thread(target=run_client, name="client", args=())
     t.start()
     connected.wait()
