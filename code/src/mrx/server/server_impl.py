@@ -6,6 +6,7 @@ import os
 import selectors
 import asyncio
 import json
+from datetime import datetime, timedelta
 
 from communication.protocol import ClientMessageType, ServerMessageType, parse_client_msg, encode_msg
 from database.create_user_db import create_user_db
@@ -14,9 +15,13 @@ from server.spacial_db import SpacialDBManager, create_spacial_db
 from server.permission_db import PermissionDBManager, create_perm_db
 from server.pending_request_db import PendingRequestDBManager, create_pending_request_db
 from logic.geometry import serialize_rect, Rect
+from collections import deque
 
-from communication.keygen import generate_key, get_or_generate_cert
+from communication.keygen import get_or_generate_cert
 
+LOGIN_FAIL_TIMEOUT_SEC = 10
+MESSAGE_TIME_WINDOW_SIZE = 20
+MAX_MESSAGES_PER_SEC = 15
 
 def main() -> None:
     print(f"PID: {os.getpid()}")
@@ -54,6 +59,8 @@ class Server(asyncio.Protocol):
         self.spacial_db = spacialstore
         self.permissions_db = permissionstore
         self.pending_requests = set()
+        self.last_login_attempt: datetime | None = None
+        self.last_message_times: deque[datetime] = deque()
 
     # ==== START methods from asyncio.Protocol ====
     def connection_made(self, transport):
@@ -63,8 +70,6 @@ class Server(asyncio.Protocol):
         self.transport = transport
 
     def connection_lost(self, exc):
-        if self.username is not None:
-            del online_users[self.username]
         if exc is None:
             print("connection closed because of EOF being reached or because this side closed it")
         else:
@@ -72,7 +77,8 @@ class Server(asyncio.Protocol):
 
     def data_received(self, data: bytes):
         # TODO parse data correctly so that arbitrary splits in the stream are handled
-        #print(f"received: {data} from {self.peername}")
+        # print(f"received: {data} from {self.peername}")
+        self.update_message_times()
         unparsed_msg = data
         (msg_type, msg), err = parse_client_msg(unparsed_msg)
         if err:
@@ -80,20 +86,35 @@ class Server(asyncio.Protocol):
             return
         match msg_type:
             case ClientMessageType.LOGIN:
+                if self.last_login_attempt is not None:
+                    d = datetime.now() - self.last_login_attempt
+                    if d.total_seconds() < LOGIN_FAIL_TIMEOUT_SEC:
+                        print(f"LOGIN refused: connection is timed out: {LOGIN_FAIL_TIMEOUT_SEC - d.total_seconds():.2}s remaining")
+                        # TODO we could end the connection here or log this event
+                        return
                 username, password = msg
                 login_successful = self.db_manager.is_valid_login(username, password)
                 if login_successful:
                     # TODO the username should not have to be sent, the client
                     # should already know this information in principle
-                    online_users[username] = self
+                    if username not in online_users:
+                        online_users[username] = self
+                    else:
+                        self.send(encode_msg(ServerMessageType.LOGIN_FAILED, [f"user already online. Must wait {LOGIN_FAIL_TIMEOUT_SEC} seconds until next login attempt"]))
+                        self.last_login_attempt = datetime.now()
+                        return
                     self.username = username
+                    print(f"user {username} logged in")
+                    print(f"{online_users = }")
                     self.send(encode_msg(ServerMessageType.LOGIN_SUCCESSFUL, [username, str(1), serialize_rect(self.spacial_db.startrect)]))
                     self.send_all_user_areas_and_accuracies()
                     return
                 if self.db_manager.get_user(username) is None:
-                    self.send(encode_msg(ServerMessageType.LOGIN_FAILED, ["user not in database"]))
+                    self.send(encode_msg(ServerMessageType.LOGIN_FAILED, [f"user not in database. Must wait {LOGIN_FAIL_TIMEOUT_SEC} seconds until next login attempt"]))
+                    self.last_login_attempt = datetime.now()
                     return
-                self.send(encode_msg(ServerMessageType.LOGIN_FAILED, ["wrong password"]))
+                self.send(encode_msg(ServerMessageType.LOGIN_FAILED, [f"wrong password. Must wait {LOGIN_FAIL_TIMEOUT_SEC} seconds until next login attempt"]))
+                self.last_login_attempt = datetime.now()
                 # TODO change the state of this connection (user is now logged in)
             case ClientMessageType.SIGNUP:
                 username, password = msg
@@ -109,6 +130,7 @@ class Server(asyncio.Protocol):
                     print(f"db error: {err}")
                     return
                 self.username = username
+                online_users[username] = self
                 self.send(encode_msg(ServerMessageType.SIGNUP_SUCCESSFUL, [username, str(1), serialize_rect(self.spacial_db.startrect)]))
                 self.send_all_user_areas_and_accuracies()
                 # TODO change the state of this connection (user is now logged in or smthn)
@@ -121,6 +143,9 @@ class Server(asyncio.Protocol):
                     online_users[user].send_user_area(self.username)
             case ClientMessageType.FRIEND_REQUEST:
                 assert self.username is not None
+                if len(msg) != 1:
+                    print("WARNING: Friend request not sent correctly: expected one message member")
+                    return
                 user, = msg
                 # TODO maybe we have to store these somewhere?
                 if user in online_users:
@@ -153,15 +178,32 @@ class Server(asyncio.Protocol):
                 path = json.loads(path_json)
                 self.spacial_db.insert(self.username, path)
                 for user in online_users:
-                    online_users[user].send_user_area(self.username)
+                    if self.username in self.permissions_db.get_perm_for_user(user):
+                        online_users[user].send_user_area(self.username)
                 #print("TODO handle UPDATE_AREA")
             case x:
                 print(f"Message type {x} not handled yet")
 
+    def update_message_times(self):
+        self.last_message_times.append(datetime.now())
+        if len(self.last_message_times) > MESSAGE_TIME_WINDOW_SIZE:
+            self.last_message_times.popleft()
+            start = self.last_message_times[0]
+            end = self.last_message_times[-1]
+            td = (end-start).total_seconds()
+            messages_per_sec = MESSAGE_TIME_WINDOW_SIZE / td
+            if messages_per_sec > MAX_MESSAGES_PER_SEC :
+                print(f"WARNING: user {self.username} has exceeded maximal messages per second ({MAX_MESSAGES_PER_SEC}): sent {MESSAGE_TIME_WINDOW_SIZE} messages in {td:.2} seconds")
+
     def send_user_area(self, user):
+        """send the area of `user` to the client that is connected to `self`.
+        should only be called if the `self` has permissions to get the area of `user`."""
         assert self.username is not None
         perms = self.permissions_db.get_perm_for_user(self.username)
-        if user in perms:
+        if user == self.username:
+            # send the user's location to the full precision
+            self.send(encode_msg(ServerMessageType.UPDATE_USER_AREA, [user, json.dumps(self.spacial_db.get_path(user))]))
+        elif user in perms:
             acc = perms[user]
             self.send(encode_msg(ServerMessageType.UPDATE_USER_AREA, [user, json.dumps(self.spacial_db.get_path(user)[:acc])]))
         else:
@@ -181,6 +223,8 @@ class Server(asyncio.Protocol):
                 assert False, f"there is an asymmetrical friend relation. relevant users: {self.username} {user}"
 
     def eof_received(self):
+        if self.username is not None:
+            self.remove_self_online_users()
         print("other party closed connection")
     # ==== END methods from asyncio.Protocol ====
 
@@ -188,6 +232,14 @@ class Server(asyncio.Protocol):
         # TODO add length of package to it before sending it
         print(f"sending {msg}")
         self.transport.write(msg)
+
+    def remove_self_online_users(self):
+        """cleans up online_users after a connection loss. should only be called if `self.username` is not None."""
+        if self.username in online_users:
+            del online_users[self.username]
+        else:
+            print(f"WARNING: remove_self_online_users: username {self.username} not in online_users")
+            print(f"online_users: {online_users}")
 
 userdatabase_path = Path("serverdata") / "users.db"
 async def start_server():
