@@ -16,6 +16,7 @@ from server.permission_db import PermissionDBManager, create_perm_db
 from server.pending_request_db import PendingRequestDBManager, create_pending_request_db
 from logic.geometry import serialize_rect, Rect
 from collections import deque
+import pprint
 
 from communication.keygen import get_or_generate_cert
 
@@ -48,6 +49,10 @@ spacialstore.insert("chud", [2, 3, 1, 0, 0, 0])
 create_perm_db(Path("user.db"))
 permissionstore = PermissionDBManager(Path("user.db"))
 permissionstore.load_perms()
+print("PERMISSIONS:")
+pprint.pprint(permissionstore._perms)
+print("INVERSE PERMISSIONS:")
+pprint.pprint(permissionstore._inv_perms)
 
 online_users: dict[str, "Server"] = dict()
 
@@ -90,6 +95,7 @@ class Server(asyncio.Protocol):
                     d = datetime.now() - self.last_login_attempt
                     if d.total_seconds() < LOGIN_FAIL_TIMEOUT_SEC:
                         print(f"LOGIN refused: connection is timed out: {LOGIN_FAIL_TIMEOUT_SEC - d.total_seconds():.2}s remaining")
+                        self.send(encode_msg(ServerMessageType.LOGIN_FAILED, [f"login timeout: {LOGIN_FAIL_TIMEOUT_SEC - d.total_seconds():.2}s remaining"]))
                         # TODO we could end the connection here or log this event
                         return
                 username, password = msg
@@ -165,6 +171,7 @@ class Server(asyncio.Protocol):
                     self.permissions_db.update(self.username, user, 0)
                     self.permissions_db.update(user, self.username, 0)
                     self.send_user_area(user)
+                    self.send_user_accuracy(user)
                     if user in online_users:
                         online_users[user].send_user_area(self.username)
             case ClientMessageType.FRIEND_REMOVE:
@@ -210,17 +217,21 @@ class Server(asyncio.Protocol):
             print(f"WARNING: tried to send region of user {user} to {self.username} but permissions don't allow")
             print(f"PERMISSIONS: {perms}")
 
+    def send_user_accuracy(self, user):
+        """send the accuracy that `self` has given to `user`."""
+        assert self.username is not None
+        perm_settings = self.permissions_db.get_perm_settings_of_user(self.username)
+        if user in perm_settings:
+            self.send(encode_msg(ServerMessageType.SET_FRIEND_ACCURACY, [user, str(perm_settings[user])]))
+        else:
+            print(f"WARNING: trying to send settings for user {user} even though{self.username} has not set the accuracy for them. (probably because of assymmetric friends relation)")
+
     def send_all_user_areas_and_accuracies(self):
         assert self.username is not None
         perms = self.permissions_db.get_perm_for_user(self.username)
         for user in perms:
             self.send_user_area(user)
-            other_perms = self.permissions_db.get_perm_for_user(user)
-            if self.username in other_perms:
-                other_acc = other_perms[self.username]
-                self.send(encode_msg(ServerMessageType.SET_FRIEND_ACCURACY, [user, str(other_acc)]))
-            else:
-                assert False, f"there is an asymmetrical friend relation. relevant users: {self.username} {user}"
+            self.send_user_accuracy(user)
 
     def eof_received(self):
         if self.username is not None:
@@ -230,7 +241,6 @@ class Server(asyncio.Protocol):
 
     def send(self, msg: bytes):
         # TODO add length of package to it before sending it
-        print(f"sending {msg}")
         self.transport.write(msg)
 
     def remove_self_online_users(self):

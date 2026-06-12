@@ -1,6 +1,9 @@
 class PermissionStore:
     def __init__(self):
         self._perms: dict[str, dict[str, int]] = {}
+        """this is a mapping of subject to object to accuracy."""
+        self._inv_perms: dict[str, dict[str, int]] = {}
+        """this is a mapping of object to subject to accuracy."""
 
     def update(self, subj_user_id: str, obj_user_id: str, accuracy: int):
         """on accuracy < 0, the subject loses the object as friend"""
@@ -18,11 +21,19 @@ class PermissionStore:
         if subj_user_id not in self._perms:
             self._perms[subj_user_id] = {}
         self._perms[subj_user_id][obj_user_id] = accuracy
+        if obj_user_id not in self._inv_perms:
+            self._inv_perms[obj_user_id] = {}
+        self._inv_perms[obj_user_id][subj_user_id] = accuracy
 
     def get_perm_for_user(self, user_id: str) -> dict[str, int]:
         if user_id not in self._perms:
             return {}
         return self._perms[user_id]
+
+    def get_perm_settings_of_user(self, user_id: str) -> dict[str, int]:
+        if user_id not in self._inv_perms:
+            return {}
+        return self._inv_perms[user_id]
 
     def get_friends(self, user_id: str):
         return self._perms[user_id]

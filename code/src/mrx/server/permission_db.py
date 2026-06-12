@@ -31,6 +31,7 @@ class PermissionDBManager(PermissionStore):
     friendship between bob and alice, one has to call
     update(bob, alice, 0) AND update(alice, bob, 0)"""
     def __init__(self, db: Path):
+        super().__init__()
         self.conn = sqlite3.connect(db)
         self.cur = self.conn.cursor()
         self.load_perms()
@@ -47,6 +48,7 @@ class PermissionDBManager(PermissionStore):
     def load_perms(self):
         self.cur.execute("SELECT * FROM permission;")
         self._perms = {}
+        self._inv_perms = {}
         perms = self.cur.fetchall()
         for perm in perms:
             super().update(*perm)
