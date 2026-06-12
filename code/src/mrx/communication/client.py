@@ -141,7 +141,7 @@ class Client(BaseClient):
     @override
     def handle_accept_request(self, friend: str, answer: AnswerKind):
         assert self.protocol is not None
-        self.protocol.send(encode_msg(ClientMessageType.FRIEND_REQUEST_ANSWER, [friend, answer]))
+        self.protocol.send(encode_msg(ClientMessageType.FRIEND_REQUEST_ANSWER, [friend, str(answer.value)]))
 
         if answer == AnswerKind.ACCEPT:
             self._model.add_friend(friend)

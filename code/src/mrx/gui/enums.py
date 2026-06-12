@@ -25,8 +25,8 @@ class UpdateKind(Enum):
 
 @unique
 class AnswerKind(Enum):
-    ACCEPT = 0
-    DENY = 1
+    DENY = 0
+    ACCEPT = 1
 
 class Change:
     def __init__(self, kind: ChangeKind, attrs: tuple):
