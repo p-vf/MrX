@@ -17,6 +17,7 @@ from server.pending_request_db import PendingRequestDBManager, create_pending_re
 from logic.geometry import serialize_rect, Rect
 from collections import deque
 import argparse
+import zxcvbn
 
 from communication.keygen import get_or_generate_cert
 
@@ -130,6 +131,18 @@ class Server(asyncio.Protocol):
                 if self.db_manager.get_user(username) is not None:
                     print(f"user {msg[0]} already in database")
                     self.send(encode_msg(ServerMessageType.SIGNUP_FAILED, ["username already taken"]))
+                    return
+                r = zxcvbn.zxcvbn(password, [username], max_length = 72)
+                score = r["score"]
+                if score < 4:
+                    suggestions = r["feedback"]["suggestions"]
+                    warning = r["feedback"]["warning"]
+                    self.send(encode_msg(ServerMessageType.SIGNUP_FAILED, [f"Password not strong enough.\nWarning: {warning}\nSuggestions:\n{"\n".join(suggestions)}"]))
+                    return
+                # recommended minimal password length is 15 characters if there is no MFA:
+                # https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Authentication_Cheat_Sheet.md#implement-proper-password-strength-controls
+                if len(password) < 15:
+                    self.send(encode_msg(ServerMessageType.SIGNUP_FAILED, [f"Password not strong enough.\nPassword too short. Must be at least 15 characters long."]))
                     return
                 err = self.db_manager.insert_user(username, 0, password)
                 if err:

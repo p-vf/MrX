@@ -297,6 +297,7 @@ dependencies = [
     { name = "pywebview" },
     { name = "tkintermapview" },
     { name = "tkinterweb" },
+    { name = "zxcvbn" },
 ]
 
 [package.metadata]
@@ -306,6 +307,7 @@ requires-dist = [
     { name = "pywebview", specifier = ">=6.2.1" },
     { name = "tkintermapview", specifier = ">=1.29" },
     { name = "tkinterweb", specifier = ">=4.25.2" },
+    { name = "zxcvbn", specifier = ">=4.5.0" },
 ]
 
 [[package]]
@@ -703,4 +705,13 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f6/08/3cb9f67a8d48021aca2a02292cc26eecd71d949ae70ad66420a8730cc302/xyzservices-2026.3.0.tar.gz", hash = "sha256:d226866a5d8e9fef337034d8da37a8298f0a1d9d1489b4018e69579eb321fea4", size = 1135736, upload-time = "2026-03-30T14:42:25.596Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a8/a9/d23012099dc88ec69a29c6407b41d89681cb674c2043cd5b467c7e299c08/xyzservices-2026.3.0-py3-none-any.whl", hash = "sha256:503183d4b322bfebc3c50cdd21192aa3e81e36c5efbf9133d54ae82143e0576b", size = 94101, upload-time = "2026-03-30T14:42:24.608Z" },
+]
+
+[[package]]
+name = "zxcvbn"
+version = "4.5.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/40/9366940b1484fd4e9423c8decbbf34a73bf52badb36281e082fe02b57aca/zxcvbn-4.5.0.tar.gz", hash = "sha256:70392c0fff39459d7f55d0211151401e79e76fcc6e2c22b61add62900359c7c1", size = 411249, upload-time = "2025-02-19T19:03:02.699Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/16/7410f8e714a109d43d17f4e27c8eabb351557653a9b570db1bd7dfdfd822/zxcvbn-4.5.0-py2.py3-none-any.whl", hash = "sha256:2b6eed621612ce6d65e6e4c7455b966acee87d0280e257956b1f06ccc66bd5ff", size = 409397, upload-time = "2025-02-19T19:03:00.521Z" },
 ]
