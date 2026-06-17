@@ -25,7 +25,7 @@ class Client(BaseClient):
 
     # ==== START methods from BaseClient ====
     @override
-    def connect(self, addr, cert_path, connected: threading.Event, end: threading.Event, modelfactory: type[Model]=Model):
+    def connect(self, addr, hostname, cert_path, connected: threading.Event, end: threading.Event, modelfactory: type[Model]=Model):
         """
         `connected` is set if the model is initialized and a connection
         has been established.
@@ -38,10 +38,10 @@ class Client(BaseClient):
         closed = threading.Event()
         self.protocol = ClientProtocol(self._model, closed)
         context = ssl.create_default_context()
-        context.load_verify_locations(cert_path)
+        context.load_verify_locations(cafile = cert_path)
         try:
             with socket.create_connection(addr) as sock:
-                with context.wrap_socket(sock, server_hostname=addr[0]) as xsock:
+                with context.wrap_socket(sock, server_hostname=hostname) as xsock:
                     connected.set()
                     xsock.setblocking(False)
                     print(xsock.getsockname())
@@ -79,8 +79,8 @@ class Client(BaseClient):
                         print("Bye!")
                     finally:
                         self._terminate(xsock, end)
-        except ConnectionRefusedError:
-            print("connection refused")
+        except ConnectionRefusedError as e:
+            print(f"connection refused: {e.args}")
             end.set()
         except Exception as e:
             end.set()
@@ -105,7 +105,7 @@ class Client(BaseClient):
     
     @override
     def handle_gps(self, gps):
-        path = self.protocol.s_store.location_to_path(gps[0], gps[1], 9)
+        path = self.protocol.s_store.location_to_path(gps[0], gps[1], 8)
         json_path = json.dumps(path)
         self.protocol.send(encode_msg(ClientMessageType.UPDATE_USER_AREA, [json_path]))
         self._model.update_user_rect(self._model.username, self.protocol.s_store.path_to_rect(path))
@@ -254,11 +254,14 @@ class ClientProtocol:
 
 def main():
     a = argparse.ArgumentParser("client")
-    a.add_argument("--host", help="set the host that the server runs on. default: localhost", default="localhost")
-    a.add_argument("--port", help="set the port the server uses. default: 8443", type=int, default=8443)
+    a.add_argument("--hostname", help="the (DNS-)hostname of the server for certificate checks. default: mrx-server", default="mrx-server")
+    a.add_argument("--hostip", help="ip of the server. default: localhost", default="localhost")
+    a.add_argument("--port", help="port of the server. default: 8443", type=int, default=8443)
     args = a.parse_args()
-    host = args.host
+    dnshost = args.hostname
+    ip = args.hostip
     port = args.port
+
     assert isinstance(port, int)
     c = Client()
     print(f"PID: {os.getpid()}")
@@ -266,9 +269,10 @@ def main():
 
     connected = threading.Event()
     end = threading.Event()
+
     def run_client():
         nonlocal connected, end, c
-        c.connect((host, port), Path("keys")/f"{host}.crt", connected, end, Model)
+        c.connect((ip, port), dnshost, Path("keys")/f"{dnshost}.crt", connected, end, Model)
     t = threading.Thread(target=run_client, name="client", args=())
     t.start()
     connected.wait()

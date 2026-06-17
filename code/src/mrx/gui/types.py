@@ -66,7 +66,7 @@ class BaseClient:
         pass
 
     @abstractmethod
-    def connect(self, addr: tuple[str, int], cert_path: Path, connected: threading.Event, end: threading.Event, modelfactory: type[BaseModel]):
+    def connect(self, addr: tuple[str, int], hostname, cert_path: Path, connected: threading.Event, end: threading.Event, modelfactory: type[BaseModel]):
         pass
 
     @abstractmethod

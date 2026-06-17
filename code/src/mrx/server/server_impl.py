@@ -6,6 +6,7 @@ import os
 import selectors
 import asyncio
 import json
+import re
 from datetime import datetime, timedelta
 
 from communication.protocol import ClientMessageType, ServerMessageType, parse_client_msg, encode_msg
@@ -34,17 +35,18 @@ def get_ip_address():
 def main() -> None:
     print(f"PID: {os.getpid()}")
     a = argparse.ArgumentParser("server")
-    a.add_argument("--localhost", help="if given, server is run on localhost only. otherwise the hostname of the device is used", action=argparse.BooleanOptionalAction, default=False)
+    # a.add_argument("--localhost", help="if given, server is run on localhost only. otherwise the hostname of the device is used", action=argparse.BooleanOptionalAction, default=False)
+    a.add_argument("--hostname", help="set name to run the server on, used for certificate. default: mrx-server", default="mrx-server")
+    a.add_argument("--hostip", help="set address to run the server on. default: whatever connects to the internet", default=None)
     a.add_argument("--port", help="set port to run the server on. default: 8443", type=int, default=8443)
     res = a.parse_args()
-    localhost = res.localhost
+    hostname = res.hostname
+    hostip = res.hostip
+    if hostip is None:
+        hostip = get_ip_address()
     port = res.port
-    host = "localhost"
-    if not localhost:
-        host = get_ip_address()  # '192.168.0.110'
-        print(host)
     try:
-        asyncio.run(start_server((host, port)))
+        asyncio.run(start_server((hostip, port), dnsname=hostname))
     except KeyboardInterrupt:
         print("Bye!")
     # # use socket.gethostname() instead of "localhost" if used for real
@@ -271,7 +273,7 @@ class Server(asyncio.Protocol):
             print(f"online_users: {online_users}")
 
 userdatabase_path = Path("serverdata") / "users.db"
-async def start_server(addr: tuple[str, int]):
+async def start_server(addr: tuple[str, int], dnsname: str):
     host, port = addr
     os.makedirs(userdatabase_path.parent, exist_ok = True)
 
@@ -287,13 +289,13 @@ async def start_server(addr: tuple[str, int]):
     loop = asyncio.get_running_loop()
 
     keydir = Path("keys")
-    cert = get_or_generate_cert(keydir, host=host)
+    cert = get_or_generate_cert(keydir, dnsname=dnsname)
     print(cert)
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     try:
-        context.load_cert_chain(keydir/(host + ".crt"), keydir/(host + ".key"))
+        context.load_cert_chain(keydir/(dnsname + ".crt"), keydir/(dnsname + ".key"))
     except FileNotFoundError as e:
-        print(f"files: {keydir/(host + ".crt")}, {keydir/(host + ".key")}")
+        print(f"files: {keydir/(dnsname + ".crt")}, {keydir/(dnsname + ".key")}")
         raise e
 
     print("server starting on address:", addr)

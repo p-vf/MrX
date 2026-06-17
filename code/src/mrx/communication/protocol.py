@@ -33,7 +33,7 @@ class ClientMessageType(enum.Enum):
 def encode_msg(message_type: ServerMessageType | ClientMessageType, data: list[str]) -> bytes:
     # TODO instead of sending the enum name, we could send the number that identifies this enum
     if message_type not in [ServerMessageType.UPDATE_USER_AREA, ClientMessageType.UPDATE_USER_AREA]:
-        print(f"sending message: {message_type}, {data}")
+        print(f"sending message type: {message_type}")
     return f"{message_type.name} {" ".join(list(map(lambda x: base64.b64encode(x.encode()).decode(), data)))}".encode()
 
 T = TypeVar("T")
@@ -54,7 +54,7 @@ def parse_msg[T: enum.Enum](msg: bytes, enumtype: type[T]) -> tuple[tuple[T | No
         for field in data.split(b" "):
             fields.append(base64.b64decode(field).decode())
     if msg_type_parsed not in [ServerMessageType.UPDATE_USER_AREA, ClientMessageType.UPDATE_USER_AREA]:
-        print(f"received and parsed message: {msg_type_parsed}, {fields}")
+        print(f"received and parsed message type: {msg_type_parsed}")
     return (msg_type_parsed, fields), err
 
 def parse_server_msg(msg: bytes) -> tuple[tuple[ServerMessageType | None, list[str]], str]:
