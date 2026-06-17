@@ -126,6 +126,7 @@ class Gui:
         self.window.evaluate_js(f"update_location()")
 
     def update_map(self, username: str, users: dict[str, Rect]):
+        assert username is not None
         self.window.state.username = username
         self.window.state.user_rects = [[u, to_json_serializable(users[u])] for u in users]
         self.window.evaluate_js("update_map()")

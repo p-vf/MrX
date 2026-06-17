@@ -36,12 +36,15 @@ def main() -> None:
     print(f"PID: {os.getpid()}")
     a = argparse.ArgumentParser("server")
     # a.add_argument("--localhost", help="if given, server is run on localhost only. otherwise the hostname of the device is used", action=argparse.BooleanOptionalAction, default=False)
+    global MAX_MESSAGES_PER_SEC
     a.add_argument("--hostname", help="set name to run the server on, used for certificate. default: mrx-server", default="mrx-server")
     a.add_argument("--hostip", help="set address to run the server on. default: whatever connects to the internet", default=None)
     a.add_argument("--port", help="set port to run the server on. default: 8443", type=int, default=8443)
+    a.add_argument("--max-messages-per-sec", help=f"set limit of messages per second. default: {MAX_MESSAGES_PER_SEC}", type=int, default=MAX_MESSAGES_PER_SEC)
     res = a.parse_args()
     hostname = res.hostname
     hostip = res.hostip
+    MAX_MESSAGES_PER_SEC = res.max_messages_per_sec
     if hostip is None:
         hostip = get_ip_address()
     port = res.port
@@ -139,7 +142,9 @@ class Server(asyncio.Protocol):
                 if score < 4:
                     suggestions = r["feedback"]["suggestions"]
                     warning = r["feedback"]["warning"]
-                    self.send(encode_msg(ServerMessageType.SIGNUP_FAILED, [f"Password not strong enough. Warning: {warning} Suggestions: {" ".join(suggestions)}"]))
+                    warning_msg = "Warning: " + warning if warning else ""
+                    suggestions_msg = "Suggestions: " + " ".join(suggestions) if suggestions else ""
+                    self.send(encode_msg(ServerMessageType.SIGNUP_FAILED, [f"Password not strong enough. {warning_msg} {suggestions_msg}"]))
                     return
                 # recommended minimal password length is 15 characters if there is no MFA:
                 # https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Authentication_Cheat_Sheet.md#implement-proper-password-strength-controls
@@ -270,7 +275,7 @@ class Server(asyncio.Protocol):
             self.spacial_db.remove_user(self.username)
         else:
             print(f"WARNING: remove_self_online_users: username {self.username} not in online_users")
-            print(f"online_users: {online_users}")
+            # print(f"online_users: {online_users}")
 
 userdatabase_path = Path("serverdata") / "users.db"
 async def start_server(addr: tuple[str, int], dnsname: str):
@@ -285,7 +290,7 @@ async def start_server(addr: tuple[str, int], dnsname: str):
 
     create_user_db(userdatabase_path)
     manager = UserDBManager(userdatabase_path)
-    print("created user database")
+    # print("created user database")
     loop = asyncio.get_running_loop()
 
     keydir = Path("keys")
