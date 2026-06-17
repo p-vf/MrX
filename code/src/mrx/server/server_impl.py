@@ -139,7 +139,7 @@ class Server(asyncio.Protocol):
                 if score < 4:
                     suggestions = r["feedback"]["suggestions"]
                     warning = r["feedback"]["warning"]
-                    self.send(encode_msg(ServerMessageType.SIGNUP_FAILED, [f"Password not strong enough.\nWarning: {warning}\nSuggestions:\n{"\n".join(suggestions)}"]))
+                    self.send(encode_msg(ServerMessageType.SIGNUP_FAILED, [f"Password not strong enough. Warning: {warning} Suggestions: {" ".join(suggestions)}"]))
                     return
                 # recommended minimal password length is 15 characters if there is no MFA:
                 # https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Authentication_Cheat_Sheet.md#implement-proper-password-strength-controls

@@ -197,16 +197,14 @@ class Gui:
                         old_user_c.setBounds(bounds)
                     }
 
-                    tagname = (user_id == username) ? "you" : user_id
-
                     if (overlapping.has(strFromBounds(bounds))) {
-                        if (tagname == "you") {
-                            overlapping.get(strFromBounds(bounds)).push(tagname);
+                        if (user_id == username) {
+                            overlapping.get(strFromBounds(bounds)).push(user_id);
                         } else {
-                            overlapping.get(strFromBounds(bounds)).unshift(tagname);
+                            overlapping.get(strFromBounds(bounds)).unshift(user_id);
                         }
                     } else {
-                        overlapping.set(strFromBounds(bounds), [tagname])
+                        overlapping.set(strFromBounds(bounds), [user_id])
                     }
                 }
 
@@ -222,9 +220,7 @@ class Gui:
                         const bounds = [[sw.lat, sw.lng], [ne.lat, ne.lng]];
                         const names = overlapping.get(strFromBounds(bounds));
 
-                        tagname = (id == username) ? "you" : id
-
-                        if (tagname == names.at(-1) ) {
+                        if (id == names.at(-1) ) {
                             names_str = "";
 
                             for (let i = 0; i < names.length; i++) {

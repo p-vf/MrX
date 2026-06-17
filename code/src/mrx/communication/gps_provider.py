@@ -39,7 +39,7 @@ class RandomSwissCityGPS():
 class GpsStub():
   def __init__(self, client):
     self.client = client
-    self.rng  = np.random.default_rng()
+    self.rng = np.random.default_rng()
     self.params = (0, 0.01)
     self.current_location = self.get_location()
     self.new_location = self.get_location()

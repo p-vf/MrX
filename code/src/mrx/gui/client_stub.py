@@ -51,13 +51,13 @@ class ClientStub(BaseClient):
         self.ready = True
 
         self.model.update_spacial([4000, 1000, 250, 100])
-        self.model.request_received("ben")
-        self.model.request_received("anderdingus")
+        self.model.request_received("Isabel")
+        self.model.request_received("Nima")
 
         spacialstore = SpacialStore(Rect(45.6283, 5.8722, 47.6283, 10.8722))
-        spacialstore.insert("chad", [2, 3, 3, 0, 0, 0])
-        spacialstore.insert("chud", [2, 0, 0, 0, 0, 0])
-        spacialstore.insert("sub5", [2, 3, 0, 0, 0, 0])
+        spacialstore.insert("Alex", [2, 3, 3, 0, 0, 0])
+        spacialstore.insert("Pascal", [3, 0, 0, 0, 0, 0])
+        spacialstore.insert("Max", [2, 3, 0, 0, 0, 0])
 
         users = spacialstore.get_all_usernames()
         for user in users:
@@ -96,7 +96,7 @@ class ClientStub(BaseClient):
         self.model.start_gui()
     
     def handle_gps(self, gps):
-        path = self.s_store.location_to_path(gps[0], gps[1], 10)
+        path = self.s_store.location_to_path(gps[0], gps[1], 8)
         rect = self.s_store.path_to_rect(path)
         self.model.update_user_rect(self.model.username, rect)
         self.model.update_map()
